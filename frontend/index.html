@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="vi" data-theme="light">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Weather Forecast VN</title>
+
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet.heat/dist/leaflet-heat.js"></script>
+
+    <style>
+      @import url("style.css");
+    </style>
+    <script src="app.js" defer></script>
+  </head>
+  <body>
+    <header>
+      <div class="brand">
+        <img
+          src="https://upload.wikimedia.org/wikipedia/commons/thumb/6/60/Weather_Icon_-_Forecast.png/64px-Weather_Icon_-_Forecast.png"
+          alt="logo"
+        />
+        <h1>Weather Forecast VN</h1>
+      </div>
+      <button
+        id="theme-toggle"
+        class="theme-toggle"
+        aria-pressed="false"
+        title="Chuyển chế độ tối"
+      >
+        🌙
+      </button>
+    </header>
+
+    <div class="search-wrap">
+      <div class="search">
+        <button id="btn-search" class="btn" title="Tìm kiếm">🔍</button>
+        <input
+          id="pac-input"
+          type="text"
+          placeholder="Nhập địa điểm cần tìm..."
+          aria-label="Tìm kiếm địa điểm"
+        />
+        <div id="sg" class="suggest" hidden></div>
+        <button id="btn-locate" class="btn" title="Vị trí hiện tại">📍</button>
+      </div>
+    </div>
+
+    <div class="toolbar" role="group" aria-label="Lớp hiển thị">
+      <button class="chip" id="chip-temp">🌡 Nhiệt độ</button>
+      <button class="chip" id="chip-rain">🌧 Mưa</button>
+      <button class="chip" id="chip-wind">💨 Gió</button>
+    </div>
+
+    <aside id="sidebar" aria-live="polite">
+      <div class="sb-header">
+        <h3 class="sb-title">Chi tiết thời tiết</h3>
+        <button class="sb-close" id="sb-close" aria-label="Đóng">×</button>
+      </div>
+      <div class="stat-grid">
+        <div class="stat">
+          <div class="label">Tọa độ</div>
+          <div class="value" id="sb-coord">-- , --</div>
+        </div>
+        <div class="stat">
+          <div class="label">Nhiệt độ</div>
+          <div class="value" id="sb-temp">-- °C</div>
+        </div>
+        <div class="stat">
+          <div class="label">Mưa</div>
+          <div class="value" id="sb-rain">-- mm</div>
+        </div>
+        <div class="stat">
+          <div class="label">Gió</div>
+          <div class="value" id="sb-wind">-- m/s</div>
+        </div>
+        <div class="stat">
+          <div class="label">Độ ẩm</div>
+          <div class="value" id="sb-hum">-- %</div>
+        </div>
+      </div>
+      <small class="muted">Nguồn: /api/obs/latest.</small>
+    </aside>
+
+    <div id="map"></div>
+
+    <div class="timebar" aria-label="Thanh thời gian">
+      <div class="label" id="time-label">Hiện tại</div>
+      <input
+        id="time-range"
+        type="range"
+        min="0"
+        max="23"
+        step="1"
+        value="12"
+      />
+      <button id="btn-play" class="play" aria-pressed="false">▶️</button>
+    </div>
+
+    <!-- Legend luôn hiển thị, không dùng aria-hidden -->
+    <div class="legend" id="legend">
+      <div>Chỉ số (°C)</div>
+      <div class="bar"></div>
+      <div class="labels"><span>Thấp</span><span>Cao</span></div>
+    </div>
+
+    <footer>Nguồn: OpenStreetMap · CARTO · Google</footer>
+  </body>
+</html>
