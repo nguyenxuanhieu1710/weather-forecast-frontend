@@ -6,15 +6,9 @@ const OPENWEATHER_API_KEY = "13ef912baa634688591e9e04478d2a01";
 
 // ===================== Cache =====================
 let latestObs = null;
-// cache cho điểm heatmap
 let tempPtsCache = null;
 let tempCacheAt = 0;
 const TEMP_TTL_MS = 3 * 60 * 1000; // 3 phút
-
-// trạng thái nút Nhiệt độ
-let tempOn = false;
-let loadingTemp = false;
-let tempReqId = 0; // chống response muộn đè state
 
 // ===================== Data helpers =====================
 async function getLatestObs() {
@@ -34,18 +28,11 @@ async function getLatestObs() {
 
 async function getTempPts(force = false) {
   const now = Date.now();
-  if (!force && tempPtsCache?.length && now - tempCacheAt < TEMP_TTL_MS) {
-    return tempPtsCache;
-  }
+  if (!force && tempPtsCache?.length && now - tempCacheAt < TEMP_TTL_MS) return tempPtsCache;
   const d = await getLatestObs();
   tempPtsCache = (d || [])
-    .filter(
-      (s) =>
-        Number.isFinite(+s.lat) &&
-        Number.isFinite(+s.lon) &&
-        Number.isFinite(+s.temp_c)
-    )
-    .map((s) => [+s.lat, +s.lon, +s.temp_c]);
+    .filter(s => Number.isFinite(+s.lat) && Number.isFinite(+s.lon) && Number.isFinite(+s.temp_c))
+    .map(s => [+s.lat, +s.lon, +s.temp_c]);
   tempCacheAt = now;
   return tempPtsCache;
 }
@@ -56,8 +43,7 @@ function findNearestObs(lat, lon, list) {
   for (const s of list) {
     const a = +s.lat, b = +s.lon;
     if (!Number.isFinite(a) || !Number.isFinite(b)) continue;
-    const dLat = lat - a, dLon = lon - b;
-    const d2 = dLat * dLat + dLon * dLon;
+    const d2 = (lat - a) ** 2 + (lon - b) ** 2;
     if (d2 < bestD2) { bestD2 = d2; best = s; }
   }
   return best;
@@ -68,12 +54,9 @@ function initSearch() {
   const input = document.getElementById("pac-input");
   const btnSearch = document.getElementById("btn-search");
   const box = document.getElementById("sg");
-  if (!input || !btnSearch) return console.error("Thiếu DOM search");
+  if (!input || !btnSearch) { console.error("Thiếu DOM search"); return; }
 
-  const debounce = (fn, ms = 350) => {
-    let t;
-    return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); };
-  };
+  const debounce = (fn, ms = 350) => { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; };
 
   function currentViewbox() {
     const b = map.getBounds?.(); if (!b) return null;
@@ -87,24 +70,20 @@ function initSearch() {
     try {
       const u = new URL("https://api.locationiq.com/v1/autocomplete");
       const params = { key: LQ_KEY, q, limit: 8, countrycodes: "vn" };
-      const vb = currentViewbox();
-      if (vb) { params.viewbox = vb; params.bounded = 1; }
+      const vb = currentViewbox(); if (vb) { params.viewbox = vb; params.bounded = 1; }
       u.search = new URLSearchParams(params);
       const r = await fetch(u);
       if (!r.ok) throw new Error("HTTP " + r.status);
       const items = await r.json();
       renderSuggest(items.map(it => ({ lat: +it.lat, lon: +it.lon, label: it.display_name })));
-    } catch (e) {
-      console.error(e); box.hidden = true; box.innerHTML = "";
-    }
+    } catch { box.hidden = true; box.innerHTML = ""; }
   }, 350);
 
   async function doSearch(q) {
     q = (q || "").trim(); if (!q) return;
     const u = new URL(`https://${LQ_REGION}.locationiq.com/v1/search`);
     const params = { key: LQ_KEY, q, format: "json", countrycodes: "vn", "accept-language": "vi", normalizeaddress: 1 };
-    const vb = currentViewbox();
-    if (vb) { params.viewbox = vb; params.bounded = 1; }
+    const vb = currentViewbox(); if (vb) { params.viewbox = vb; params.bounded = 1; }
     u.search = new URLSearchParams(params);
     const r = await fetch(u);
     if (!r.ok) throw new Error("HTTP " + r.status);
@@ -121,9 +100,7 @@ function initSearch() {
     box.style.left = input.offsetLeft + "px";
     box.style.width = input.offsetWidth + "px";
     box.hidden = false;
-    Array.from(box.children).forEach((el, i) => el.onclick = () => {
-      const it = items[i]; flyTo(it.lat, it.lon, it.label); box.hidden = true;
-    });
+    Array.from(box.children).forEach((el, i) => el.onclick = () => { const it = items[i]; flyTo(it.lat, it.lon, it.label); box.hidden = true; });
   }
 
   function flyTo(lat, lon, label) {
@@ -132,15 +109,14 @@ function initSearch() {
   }
 
   input.addEventListener("input", (e) => acFetch(e.target.value));
-  input.addEventListener("keydown", (e) => {
-    if (e.key === "Enter" && !e.isComposing) { e.preventDefault(); doSearch(input.value); }
-  });
+  input.addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.isComposing) { e.preventDefault(); doSearch(input.value); } });
   btnSearch.addEventListener("click", () => doSearch(input.value));
 }
 
 // ===================== Map init =====================
 const map = L.map("map").setView([21.0285, 105.8542], 11);
 window.map = map;
+
 const osm = L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
   maxZoom: 20, attribution: "© OpenStreetMap contributors"
 }).addTo(map);
@@ -158,168 +134,214 @@ L.control.layers(
   {}, { position: "topleft" }
 ).addTo(map);
 
-// ===================== Raster layers =====================
-const tempLayer = L.tileLayer(
-  `https://tile.openweathermap.org/map/temp_new/{z}/{x}/{y}.png?appid=${OPENWEATHER_API_KEY}`,
-  { attribution: "OpenWeatherMap" }
-);
-const rainLayer = L.tileLayer(
-  `https://tile.openweathermap.org/map/precipitation_new/{z}/{x}/{y}.png?appid=${OPENWEATHER_API_KEY}`,
-  { attribution: "OpenWeatherMap" }
-);
-const windLayer = L.tileLayer(
-  `https://tile.openweathermap.org/map/wind_new/{z}/{x}/{y}.png?appid=${OPENWEATHER_API_KEY}`,
-  { attribution: "OpenWeatherMap" }
-);
-
-// ===================== Heat layer =====================
-const HEAT_OPTS = {
-  radius: 28, blur: 18, maxZoom: 12,
-  gradient: { 0.2: "#2b6cb0", 0.4: "#60a5fa", 0.6: "#fbbf24", 0.8: "#ef4444", 1.0: "#fff" }
-};
-let heatLayer = L.heatLayer([], HEAT_OPTS);
-  
-
-// Trạng thái thực lấy từ map
-function tempIsOn(){ return map.hasLayer(tempLayer) || map.hasLayer(heatLayer); }
-
-function turnOffTemp(){
-  if (map.hasLayer(tempLayer)) map.removeLayer(tempLayer);
-  if (map.hasLayer(heatLayer)) map.removeLayer(heatLayer);
-  // tạo instance mới để tránh kẹt buffer
-  heatLayer = L.heatLayer([], HEAT_OPTS);
-  document.getElementById("chip-temp").classList.remove("active");
-  tempReqId++; // huỷ mọi request enableTemp đang chờ
-  // tuỳ chọn: reset cache lần sau luôn refetch
-  // tempPtsCache = null; tempCacheAt = 0;
-}
+// Pane riêng cho lớp khí tượng
+map.createPane("meteo");
+map.getPane("meteo").style.zIndex = 420;
+map.getPane("meteo").style.mixBlendMode = "multiply";
 
 
 
-async function enableTemp(reqId){
-  const pts = await getTempPts(true);          // luôn refetch khi bật lại
-  if (!tempIsOn() || reqId !== tempReqId) return; // người dùng đã tắt hoặc có yêu cầu mới
-  if (pts.length){
-    heatLayer.setLatLngs(pts);
-    if (!map.hasLayer(heatLayer)) heatLayer.addTo(map);
-  }
-}
-
-const tempBtn = document.getElementById("chip-temp");
-
-tempBtn.addEventListener("click", async ()=>{
-  if (tempIsOn()){ turnOffTemp(); return; }
-
-  tempBtn.classList.add("active");
-  tempLayer.addTo(map);            // bật raster ngay
-
-  const reqId = ++tempReqId;
-try{
-  const pts = await getTempPts(true);   // refetch
-  if (reqId !== tempReqId) return;      // đã bị tắt hoặc có request mới
-
-  if (pts.length){
-    heatLayer.setLatLngs(pts);
-    heatLayer.addTo(map);               // luôn add lại sau khi set điểm
-  } else {
-    console.warn("Không có điểm nhiệt độ từ backend.");
-  }
-}catch(e){
-  console.error(e);
-  if (reqId === tempReqId) turnOffTemp();
-  }
-});
-
-// ===== Legend Mưa/Gió =====
+// ===================== Legend =====================
 let rwLegend = null;
 function setLegend(title, stops, colors, unit) {
   if (rwLegend) map.removeControl(rwLegend);
   const ctrl = L.control({ position: "bottomleft" });
+
   ctrl.onAdd = () => {
-    const div = L.DomUtil.create("div","legend");
-    div.style.cssText="padding:8px;background:rgba(255,255,255,.9);border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,.15)";
-    const bar=`linear-gradient(to right, ${colors.join(",")})`;
+    const div = L.DomUtil.create("div", "legend");
+    div.style.cssText =
+      "padding:10px 12px;background:rgba(255,255,255,.95);border-radius:12px;box-shadow:0 4px 16px rgba(0,0,0,.12);";
+
+    const bar = `linear-gradient(to right, ${colors.join(",")})`;
+
+    const ticks = stops.map((_, i) => {
+      const pct = (i / (stops.length - 1)) * 100;
+      return `<span style="position:absolute;left:${pct}%;bottom:-4px;width:1px;height:6px;background:#9aa4b2;transform:translateX(-0.5px)"></span>`;
+    }).join("");
+
+    const labels = `
+      <div style="display:flex;justify-content:space-between;gap:14px;flex:1;
+                  font-size:12px;font-variant-numeric:tabular-nums;color:#475569;">
+        ${stops.map(s => `<span>${s}</span>`).join("")}
+      </div>
+      <div style="margin-left:10px;font-size:12px;color:#64748b;white-space:nowrap">${unit}</div>`;
+
     div.innerHTML = `
-      <div style="font-weight:600;margin-bottom:6px">${title}</div>
-      <div style="height:10px;border-radius:6px;background:${bar}"></div>
-      <div style="display:flex;justify-content:space-between;font-size:12px;margin-top:4px">
-        ${stops.map(s=>`<span>${s}${unit}</span>`).join("")}
-      </div>`;
+      <div style="font-weight:700;color:#334155;margin-bottom:8px">${title}</div>
+      <div style="position:relative;height:12px;border-radius:8px;background:${bar};
+                  box-shadow:inset 0 0 0 1px rgba(0,0,0,.06)">${ticks}</div>
+      <div style="display:flex;align-items:center;margin-top:6px">${labels}</div>
+    `;
+
+    L.DomEvent.disableClickPropagation(div);
     return div;
   };
-  ctrl.addTo(map); rwLegend = ctrl;
+
+  ctrl.addTo(map);
+  rwLegend = ctrl;
 }
-function clearLegend(){ if (rwLegend){ map.removeControl(rwLegend); rwLegend=null; } }
 
-// ===== Heatmap Mưa/Gió =====
-const RAIN_MAX = 50;   // mm/h
-const WIND_MAX = 40;   // m/s
-const HEAT_COMMON = { radius: 28, blur: 20, maxZoom: 12, minOpacity: 0.35 };
+function clearLegend(){ if (rwLegend){ map.removeControl(rwLegend); rwLegend = null; } }
 
-const rainGradient = { 0.00:"rgba(0,0,0,0)", 0.05:"#d7f3ff", 0.15:"#9ed9f6", 0.30:"#5cb2ee", 0.55:"#2f7fd8", 0.75:"#5b3fd6", 0.90:"#a426d9", 1.00:"#ff4dd2" };
-const windGradient = { 0.00:"#f7fbff", 0.15:"#deebf7", 0.30:"#c6dbef", 0.50:"#9ecae1", 0.70:"#6baed6", 0.85:"#3182bd", 1.00:"#08519c" };
+// Legend nhiệt độ tĩnh trong HTML
+const tempLegendBox = document.getElementById("legend-temp");
+function showTempLegend(on){ if (tempLegendBox) tempLegendBox.style.display = on ? "block" : "none"; }
 
-let rainHeat = L.heatLayer([], { ...HEAT_COMMON, gradient: rainGradient });
-let windHeat = L.heatLayer([], { ...HEAT_COMMON, gradient: windGradient });
+// ===================== Color + Grid helpers =====================
+function hexToRgb(hex) {
+  const h = hex.replace("#", "");
+  const n = parseInt(h, 16);
+  return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
+}
+function lerp(a, b, t) { return a + (b - a) * t; }
+function lerpColor(c1, c2, t) {
+  const a = hexToRgb(c1), b = hexToRgb(c2);
+  const r = Math.round(lerp(a.r, b.r, t));
+  const g = Math.round(lerp(a.g, b.g, t));
+  const bb = Math.round(lerp(a.b, b.b, t));
+  return `rgb(${r},${g},${bb})`;
+}
+function makeStopColorScale(stops, colors) {
+  return function(v) {
+    if (!Number.isFinite(v)) return "rgba(0,0,0,0)";
+    if (v <= stops[0]) return colors[0];
+    const last = stops.length - 1;
+    if (v >= stops[last]) return colors[last];
+    for (let i = 0; i < last; i++) {
+      const s0 = stops[i], s1 = stops[i+1];
+      if (v >= s0 && v <= s1) {
+        const t = (v - s0) / (s1 - s0 || 1e-9);
+        return lerpColor(colors[i], colors[i+1], t);
+      }
+    }
+    return colors[last];
+  };
+}
 
-const as01 = (v,max)=> Math.max(0, Math.min(1, v/max));
-const toRain = a => a.map(o => [o.lat, o.lon, as01(+o.precip_mm||0, RAIN_MAX)]);
-const toWind = a => a.map(o => [o.lat, o.lon, as01(+o.wind_ms||0,   WIND_MAX)]);
+const GRID_STEP = 0.25;
+const GRID_HALF = GRID_STEP / 2;
 
-// ===== Controller: 1 state duy nhất =====
-let layerMode = "none"; // "none" | "rain" | "wind"
-let busy = false;
+// thang màu
+const TEMP_STOPS  = [0, 10, 20, 30, 40];
+const TEMP_COLORS = ["#2b6cb0","#60a5fa","#fbbf24","#f97316","#b91c1c"];
+const tempColorScale = makeStopColorScale(TEMP_STOPS, TEMP_COLORS);
+
+const RAIN_STOPS  = [0, 5, 10, 20, 30, 50];
+const RAIN_COLORS = ["#e6f4ff","#b3dcff","#7fbfff","#5f8bff","#7a3cff","#b400ff"];
+const rainColorScale = makeStopColorScale(RAIN_STOPS, RAIN_COLORS);
+
+const WIND_STOPS  = [0, 5, 10, 15, 25, 40];
+const WIND_COLORS = ["#f7fbff","#deebf7","#c6dbef","#9ecae1","#6baed6","#08519c"];
+const windColorScale = makeStopColorScale(WIND_STOPS, WIND_COLORS);
+
+// xây layer lưới từ obs
+function buildGridLayerFromObs(obs, valueKey, colorScale) {
+  if (!Array.isArray(obs) || !obs.length) return null;
+  const group = L.layerGroup();
+
+  for (const o of obs) {
+    const lat = +o.lat;
+    const lon = +o.lon;
+    const v = +o[valueKey];
+    if (!Number.isFinite(lat) || !Number.isFinite(lon) || !Number.isFinite(v)) continue;
+
+    // Cắt theo bbox Việt Nam (đủ để loại bỏ phần Lào / TQ / Campuchia / biển xa)
+    if (lat < 8 || lat > 24.5 || lon < 102 || lon > 110) continue;
+
+    const bounds = [
+      [lat - GRID_HALF, lon - GRID_HALF],
+      [lat + GRID_HALF, lon + GRID_HALF]
+    ];
+    const color = colorScale(v);
+
+    const rect = L.rectangle(bounds, {
+      pane: "meteo",
+      stroke: false,
+      fillOpacity: 0.85,
+      fillColor: color
+    });
+
+    rect.feature = { properties: { obs: o } };
+    rect.on("click", () => {
+      fetchAndShowWeatherFromObs(lat, lon);
+    });
+
+    group.addLayer(rect);
+  }
+
+  return group;
+}
+
+
+
+// các layer lưới
+let tempGridLayer = null;
+let rainGridLayer = null;
+let windGridLayer = null;
+
+// ===================== Unified controller: Nhiệt độ • Mưa • Gió =====================
+let mode = "none";    // "none" | "temp" | "rain" | "wind"
 let reqId = 0;
 
-function setChip(id, on){ document.getElementById(id)?.classList.toggle("active", !!on); }
-function clearLayers(){
-  if (map.hasLayer(rainHeat)) map.removeLayer(rainHeat);
-  if (map.hasLayer(windHeat)) map.removeLayer(windHeat);
+function setChipActive(next){
+  document.getElementById("chip-temp")?.classList.toggle("active", next==="temp");
+  document.getElementById("chip-rain")?.classList.toggle("active", next==="rain");
+  document.getElementById("chip-wind")?.classList.toggle("active", next==="wind");
 }
 
-async function switchMode(next){
-  if (busy) return;
-  busy = true;
+function clearAllLayers(){
+  if (tempGridLayer && map.hasLayer(tempGridLayer)) map.removeLayer(tempGridLayer);
+  if (rainGridLayer && map.hasLayer(rainGridLayer)) map.removeLayer(rainGridLayer);
+  if (windGridLayer && map.hasLayer(windGridLayer)) map.removeLayer(windGridLayer);
+  tempGridLayer = rainGridLayer = windGridLayer = null;
+  clearLegend();
+  showTempLegend(false);
+}
+
+async function switchLayer(next){
   const my = ++reqId;
 
-  try {
-    // toggle off nếu bấm lại chính nó
-    if (layerMode === next) {
-      clearLayers(); clearLegend();
-      setChip("chip-rain", false); setChip("chip-wind", false);
-      layerMode = "none";
-      return;
-    }
+  if (mode === next){
+    clearAllLayers();
+    setChipActive("none");
+    mode = "none";
+    return;
+  }
 
-    // chuyển lớp
-    clearLayers(); clearLegend();
-    setChip("chip-rain", next==="rain");
-    setChip("chip-wind", next==="wind");
+  clearAllLayers();
+  setChipActive(next);
 
-    const obs = await getLatestObs();         // /api/obs/latest
-    if (my !== reqId || !Array.isArray(obs) || !obs.length) return;
+  const obs = await getLatestObs();
+  if (my !== reqId || !Array.isArray(obs) || !obs.length){ mode = "none"; return; }
 
-    if (next === "rain") {
-      rainHeat.setLatLngs(toRain(obs));
-      rainHeat.addTo(map);
-      setLegend("Mưa", [0,5,10,20,30,50],
-        ["#0000","#d7f3ff","#9ed9f6","#5cb2ee","#2f7fd8","#a426d9"], " mm/h");
-    } else if (next === "wind") {
-      windHeat.setLatLngs(toWind(obs));
-      windHeat.addTo(map);
-      setLegend("Gió", [0,5,10,15,25,40],
-        ["#f7fbff","#deebf7","#c6dbef","#9ecae1","#6baed6","#08519c"], " m/s");
-    }
-    layerMode = next;
-  } catch(e){ console.error(e); }
-  finally { busy = false; }
+  if (next === "temp"){
+    tempGridLayer = buildGridLayerFromObs(obs, "temp_c", tempColorScale);
+    if (tempGridLayer) tempGridLayer.addTo(map);
+    showTempLegend(true);
+    mode = "temp";
+    return;
+  }
+
+  if (next === "rain"){
+    rainGridLayer = buildGridLayerFromObs(obs, "precip_mm", rainColorScale);
+    if (rainGridLayer) rainGridLayer.addTo(map);
+    setLegend("Mưa", RAIN_STOPS, RAIN_COLORS, "mm/h");
+    mode = "rain";
+    return;
+  }
+
+  if (next === "wind"){
+    windGridLayer = buildGridLayerFromObs(obs, "wind_ms", windColorScale);
+    if (windGridLayer) windGridLayer.addTo(map);
+    setLegend("Gió", WIND_STOPS, WIND_COLORS, "m/s");
+    mode = "wind";
+    return;
+  }
 }
 
-// Gắn đúng 1 lần
-document.getElementById("chip-rain").onclick = () => switchMode("rain");
-document.getElementById("chip-wind").onclick = () => switchMode("wind");
-
-
+document.getElementById("chip-temp").onclick = () => switchLayer("temp");
+document.getElementById("chip-rain").onclick  = () => switchLayer("rain");
+document.getElementById("chip-wind").onclick  = () => switchLayer("wind");
 
 // ===================== Sidebar từ backend =====================
 const sidebar = document.getElementById("sidebar");
@@ -400,6 +422,37 @@ document.getElementById("theme-toggle").addEventListener("click", () => {
 map.on("baselayerchange", (e) => {
   if (document.documentElement.getAttribute("data-theme") === "light") lightBase = e.layer;
 });
+
+// Tạo layer biên giới Việt Nam (chỉ hiển thị đường biên)
+let vietnamMask = null;
+
+fetch("vietnam.geojson")
+  .then(r => r.json())
+  .then(data => {
+    const vn = data.features.find(f =>
+      f.properties.ADMIN === "Vietnam" ||
+      f.properties.NAME === "Vietnam"
+    );
+    if (!vn) {
+      console.error("Không tìm thấy feature Vietnam trong vietnam.geojson");
+      return;
+    }
+
+    vietnamMask = L.geoJSON(vn, {
+      pane: "meteo",
+      style: {
+        color: "#4b5563",
+        weight: 1.2,
+        fillOpacity: 0
+      }
+    }).addTo(map);
+  })
+  .catch(err => console.error("Lỗi load vietnam.geojson:", err));
+
+
+
+
+
 
 // ===================== Vị trí hiện tại =====================
 let userMarker = null;
