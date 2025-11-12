@@ -4,7 +4,6 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Weather Forecast VN</title>
-
     <link
       rel="stylesheet"
       href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
@@ -15,6 +14,7 @@
     <style>
       @import url("style.css");
     </style>
+    <script src="https://unpkg.com/leaflet-pip/leaflet-pip.min.js"></script>
     <script src="app.js" defer></script>
   </head>
   <body>
@@ -100,14 +100,16 @@
       />
       <button id="btn-play" class="play" aria-pressed="false">▶️</button>
     </div>
-
-    <!-- Legend luôn hiển thị, không dùng aria-hidden -->
-    <div class="legend" id="legend">
-      <div>Chỉ số (°C)</div>
+    <!-- legend nhiệt độ tĩnh -->
+    <!-- đặt ở góc trái dưới như bạn đang có -->
+    <div id="legend-temp" class="legend">
+      <div class="title">Chỉ số (°C)</div>
       <div class="bar"></div>
-      <div class="labels"><span>Thấp</span><span>Cao</span></div>
+      <div class="ticks"><span>Thấp</span><span>Cao</span></div>
     </div>
+
 
     <footer>Nguồn: OpenStreetMap · CARTO · Google</footer>
   </body>
+  
 </html>
