@@ -137,9 +137,8 @@ L.control.layers(
 // Pane riêng cho lớp khí tượng
 map.createPane("meteo");
 map.getPane("meteo").style.zIndex = 420;
-map.getPane("meteo").style.mixBlendMode = "multiply";
-
-
+// tăng tương phản màu, tránh nhạt đi
+map.getPane("meteo").style.mixBlendMode = "normal";
 
 // ===================== Legend =====================
 let rwLegend = null;
@@ -151,28 +150,22 @@ function setLegend(title, stops, colors, unit) {
     const div = L.DomUtil.create("div", "legend");
     div.style.cssText =
       "padding:10px 12px;background:rgba(255,255,255,.95);border-radius:12px;box-shadow:0 4px 16px rgba(0,0,0,.12);";
-
     const bar = `linear-gradient(to right, ${colors.join(",")})`;
-
     const ticks = stops.map((_, i) => {
       const pct = (i / (stops.length - 1)) * 100;
       return `<span style="position:absolute;left:${pct}%;bottom:-4px;width:1px;height:6px;background:#9aa4b2;transform:translateX(-0.5px)"></span>`;
     }).join("");
-
     const labels = `
       <div style="display:flex;justify-content:space-between;gap:14px;flex:1;
                   font-size:12px;font-variant-numeric:tabular-nums;color:#475569;">
         ${stops.map(s => `<span>${s}</span>`).join("")}
       </div>
       <div style="margin-left:10px;font-size:12px;color:#64748b;white-space:nowrap">${unit}</div>`;
-
     div.innerHTML = `
       <div style="font-weight:700;color:#334155;margin-bottom:8px">${title}</div>
       <div style="position:relative;height:12px;border-radius:8px;background:${bar};
                   box-shadow:inset 0 0 0 1px rgba(0,0,0,.06)">${ticks}</div>
-      <div style="display:flex;align-items:center;margin-top:6px">${labels}</div>
-    `;
-
+      <div style="display:flex;align-items:center;margin-top:6px">${labels}</div>`;
     L.DomEvent.disableClickPropagation(div);
     return div;
   };
@@ -180,14 +173,13 @@ function setLegend(title, stops, colors, unit) {
   ctrl.addTo(map);
   rwLegend = ctrl;
 }
-
 function clearLegend(){ if (rwLegend){ map.removeControl(rwLegend); rwLegend = null; } }
 
 // Legend nhiệt độ tĩnh trong HTML
 const tempLegendBox = document.getElementById("legend-temp");
 function showTempLegend(on){ if (tempLegendBox) tempLegendBox.style.display = on ? "block" : "none"; }
 
-// ===================== Color + Grid helpers =====================
+// ===================== Color helpers =====================
 function hexToRgb(hex) {
   const h = hex.replace("#", "");
   const n = parseInt(h, 16);
@@ -218,25 +210,53 @@ function makeStopColorScale(stops, colors) {
   };
 }
 
-const GRID_STEP = 0.25;
-const GRID_HALF = GRID_STEP / 2;
+// ===================== Grid step inference =====================
+// Tự suy ra kích thước lưới từ dữ liệu để các ô "khít nhau"
+// và nới nhẹ 1% để loại bỏ khe trắng.
+function inferGridHalfStep(obs) {
+  const lats = [];
+  const lons = [];
+  const seenLat = new Set();
+  const seenLon = new Set();
+  for (const o of obs) {
+    const la = +o.lat, lo = +o.lon;
+    if (Number.isFinite(la) && !seenLat.has(la)) { lats.push(la); seenLat.add(la); }
+    if (Number.isFinite(lo) && !seenLon.has(lo)) { lons.push(lo); seenLon.add(lo); }
+  }
+  lats.sort((a,b)=>a-b); lons.sort((a,b)=>a-b);
+  function medianDelta(arr){
+    const d=[]; for(let i=1;i<arr.length;i++) d.push(arr[i]-arr[i-1]);
+    d.sort((a,b)=>a-b);
+    if (!d.length) return 0.25; // mặc định
+    const m = d[Math.floor(d.length/2)];
+    return m || 0.25;
+  }
+  const stepLat = medianDelta(lats);
+  const stepLon = medianDelta(lons);
+  // nới 1% để sát nhau, nhưng không vượt quá 0.5 độ
+  const halfLat = Math.min(stepLat/2 * 1.01, 0.5);
+  const halfLon = Math.min(stepLon/2 * 1.01, 0.5);
+  return { halfLat, halfLon };
+}
 
-// thang màu
-const TEMP_STOPS  = [0, 10, 20, 30, 40];
-const TEMP_COLORS = ["#2b6cb0","#60a5fa","#fbbf24","#f97316","#b91c1c"];
+// ===================== Color scales (rõ hơn) =====================
+// dùng nhiều mốc hơn để dải màu rõ
+const TEMP_STOPS  = [-5, 0, 10, 20, 25, 30, 35, 40];
+const TEMP_COLORS = ["#2c7fb8","#7fcdbb","#edf8b1","#fed976","#fd8d3c","#f03b20","#bd0026","#800026"];
 const tempColorScale = makeStopColorScale(TEMP_STOPS, TEMP_COLORS);
 
-const RAIN_STOPS  = [0, 5, 10, 20, 30, 50];
-const RAIN_COLORS = ["#e6f4ff","#b3dcff","#7fbfff","#5f8bff","#7a3cff","#b400ff"];
+const RAIN_STOPS  = [0, 2, 5, 10, 20, 30, 50];
+const RAIN_COLORS = ["#e6f4ff","#b3dcff","#7fbfff","#5f8bff","#3b5bff","#7a3cff","#b400ff"];
 const rainColorScale = makeStopColorScale(RAIN_STOPS, RAIN_COLORS);
 
-const WIND_STOPS  = [0, 5, 10, 15, 25, 40];
-const WIND_COLORS = ["#f7fbff","#deebf7","#c6dbef","#9ecae1","#6baed6","#08519c"];
+const WIND_STOPS  = [0, 3, 6, 10, 15, 25, 40];
+const WIND_COLORS = ["#eff3ff","#c6dbef","#9ecae1","#6baed6","#3182bd","#08519c","#08306b"];
 const windColorScale = makeStopColorScale(WIND_STOPS, WIND_COLORS);
 
-// xây layer lưới từ obs
+// ===================== Build rectangles (khít nhau, màu đậm) =====================
 function buildGridLayerFromObs(obs, valueKey, colorScale) {
   if (!Array.isArray(obs) || !obs.length) return null;
+  const { halfLat, halfLon } = inferGridHalfStep(obs);
   const group = L.layerGroup();
 
   for (const o of obs) {
@@ -245,26 +265,25 @@ function buildGridLayerFromObs(obs, valueKey, colorScale) {
     const v = +o[valueKey];
     if (!Number.isFinite(lat) || !Number.isFinite(lon) || !Number.isFinite(v)) continue;
 
-    // Cắt theo bbox Việt Nam (đủ để loại bỏ phần Lào / TQ / Campuchia / biển xa)
+    // Cắt theo bbox Việt Nam
     if (lat < 8 || lat > 24.5 || lon < 102 || lon > 110) continue;
 
+    // nới nhẹ để các ô chạm nhau, không lộ khe
     const bounds = [
-      [lat - GRID_HALF, lon - GRID_HALF],
-      [lat + GRID_HALF, lon + GRID_HALF]
+      [lat - halfLat, lon - halfLon],
+      [lat + halfLat, lon + halfLon]
     ];
     const color = colorScale(v);
 
     const rect = L.rectangle(bounds, {
       pane: "meteo",
       stroke: false,
-      fillOpacity: 0.85,
+      fillOpacity: 0.92,     // đậm hơn
       fillColor: color
     });
 
     rect.feature = { properties: { obs: o } };
-    rect.on("click", () => {
-      fetchAndShowWeatherFromObs(lat, lon);
-    });
+    rect.on("click", () => { fetchAndShowWeatherFromObs(lat, lon); });
 
     group.addLayer(rect);
   }
@@ -272,9 +291,7 @@ function buildGridLayerFromObs(obs, valueKey, colorScale) {
   return group;
 }
 
-
-
-// các layer lưới
+// ===================== Layers =====================
 let tempGridLayer = null;
 let rainGridLayer = null;
 let windGridLayer = null;
@@ -317,7 +334,8 @@ async function switchLayer(next){
   if (next === "temp"){
     tempGridLayer = buildGridLayerFromObs(obs, "temp_c", tempColorScale);
     if (tempGridLayer) tempGridLayer.addTo(map);
-    showTempLegend(true);
+    setLegend("Nhiệt độ", TEMP_STOPS, TEMP_COLORS, "°C");
+    showTempLegend(false);
     mode = "temp";
     return;
   }
@@ -343,7 +361,7 @@ document.getElementById("chip-temp").onclick = () => switchLayer("temp");
 document.getElementById("chip-rain").onclick  = () => switchLayer("rain");
 document.getElementById("chip-wind").onclick  = () => switchLayer("wind");
 
-// ===================== Sidebar từ backend =====================
+// ===================== Sidebar =====================
 const sidebar = document.getElementById("sidebar");
 document.getElementById("sb-close").addEventListener("click", () => sidebar.classList.remove("open"));
 
@@ -423,7 +441,7 @@ map.on("baselayerchange", (e) => {
   if (document.documentElement.getAttribute("data-theme") === "light") lightBase = e.layer;
 });
 
-// Tạo layer biên giới Việt Nam (chỉ hiển thị đường biên)
+// ===================== Biên giới Việt Nam =====================
 let vietnamMask = null;
 
 fetch("vietnam.geojson")
@@ -448,11 +466,6 @@ fetch("vietnam.geojson")
     }).addTo(map);
   })
   .catch(err => console.error("Lỗi load vietnam.geojson:", err));
-
-
-
-
-
 
 // ===================== Vị trí hiện tại =====================
 let userMarker = null;
