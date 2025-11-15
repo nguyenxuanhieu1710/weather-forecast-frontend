@@ -1,78 +1,84 @@
-// ===================== Color helpers =====================
+// colors.js
+// Mapping v -> màu heatmap, palette, alpha
 
-function hexToRgb(hex) {
-  const h = hex.replace("#", "");
-  const n = parseInt(h, 16);
-  return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
-}
+const HEAT_ALPHA_MIN = 0.0;
+const HEAT_ALPHA_MAX = 0.9;
 
-function lerp(a, b, t) {
-  return a + (b - a) * t;
-}
+/**
+ * Map v in [0..1] -> RGB (xanh → vàng → đỏ)
+ * @param {number} v
+ * @returns {{r:number,g:number,b:number,a:number}}
+ */
+function heatColor(v) {
+  v = Math.max(0, Math.min(1, v));
 
-function lerpColor(c1, c2, t) {
-  const a = hexToRgb(c1);
-  const b = hexToRgb(c2);
-  const r = Math.round(lerp(a.r, b.r, t));
-  const g = Math.round(lerp(a.g, b.g, t));
-  const bb = Math.round(lerp(a.b, b.b, t));
-  return `rgb(${r},${g},${bb})`;
-}
+  let r, g, b;
 
-function makeStopColorScale(stops, colors) {
-  return function (v) {
-    if (!Number.isFinite(v)) return "rgba(0,0,0,0)";
-    if (v <= stops[0]) return colors[0];
-    const last = stops.length - 1;
-    if (v >= stops[last]) return colors[last];
+  if (v < 0.5) {
+    // 0 -> xanh / 0.5 -> vàng
+    const t = v / 0.5;
+    r = 255 * t;
+    g = 255;
+    b = 255 * (1 - t);
+  } else {
+    // 0.5 -> vàng / 1 -> đỏ
+    const t = (v - 0.5) / 0.5;
+    r = 255;
+    g = 255 * (1 - t);
+    b = 0;
+  }
 
-    for (let i = 0; i < last; i++) {
-      const s0 = stops[i];
-      const s1 = stops[i + 1];
-      if (v >= s0 && v <= s1) {
-        const t = (v - s0) / (s1 - s0 || 1e-9);
-        return lerpColor(colors[i], colors[i + 1], t);
-      }
-    }
-    return colors[last];
+  const a = HEAT_ALPHA_MIN + (HEAT_ALPHA_MAX - HEAT_ALPHA_MIN) * v;
+
+  return {
+    r: Math.round(r),
+    g: Math.round(g),
+    b: Math.round(b),
+    a: Math.round(a * 255)
   };
 }
 
-// ===================== Color scales =====================
+/**
+ * Map nhiệt độ (°C) -> RGBA
+ * theo scale cố định từ config.js
+ *
+ * @param {number} tC
+ */
+function tempToRGBA(tC) {
+  const v = window.normalizeTempFixed(tC);
+  return heatColor(v);
+}
 
-const TEMP_STOPS = [-5, 0, 10, 20, 25, 30, 35, 40];
-const TEMP_COLORS = [
-  "#2c7fb8",
-  "#7fcdbb",
-  "#edf8b1",
-  "#fed976",
-  "#fd8d3c",
-  "#f03b20",
-  "#bd0026",
-  "#800026"
-];
-const tempColorScale = makeStopColorScale(TEMP_STOPS, TEMP_COLORS);
+/**
+ * Tạo gradient bar (legend) dạng canvas linear
+ *
+ * @param {HTMLCanvasElement} canvas
+ */
+function drawHeatLegend(canvas) {
+  if (!canvas) return;
 
-const RAIN_STOPS = [0, 2, 5, 10, 20, 30, 50];
-const RAIN_COLORS = [
-  "#e6f4ff",
-  "#b3dcff",
-  "#7fbfff",
-  "#5f8bff",
-  "#3b5bff",
-  "#7a3cff",
-  "#b400ff"
-];
-const rainColorScale = makeStopColorScale(RAIN_STOPS, RAIN_COLORS);
+  const ctx = canvas.getContext("2d");
+  const w = canvas.width;
+  const h = canvas.height;
 
-const WIND_STOPS = [0, 3, 6, 10, 15, 25, 40];
-const WIND_COLORS = [
-  "#eff3ff",
-  "#c6dbef",
-  "#9ecae1",
-  "#6baed6",
-  "#3182bd",
-  "#08519c",
-  "#08306b"
-];
-const windColorScale = makeStopColorScale(WIND_STOPS, WIND_COLORS);
+  const img = ctx.createImageData(w, h);
+  const data = img.data;
+
+  for (let x = 0; x < w; x++) {
+    const v = x / (w - 1);
+    const { r, g, b, a } = heatColor(v);
+    for (let y = 0; y < h; y++) {
+      const idx = (y * w + x) * 4;
+      data[idx] = r;
+      data[idx + 1] = g;
+      data[idx + 2] = b;
+      data[idx + 3] = a;
+    }
+  }
+
+  ctx.putImageData(img, 0, 0);
+}
+
+window.heatColor = heatColor;
+window.tempToRGBA = tempToRGBA;
+window.drawHeatLegend = drawHeatLegend;

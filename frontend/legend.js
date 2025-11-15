@@ -1,49 +1,22 @@
-// ===================== Legend =====================
+// legend.js
+// Vẽ thanh màu nhiệt độ và hiển thị range TEMP_MIN_C → TEMP_MAX_C
 
-function setLegend(title, stops, colors, unit) {
-  if (rwLegend) map.removeControl(rwLegend);
+function initLegend() {
+  const wrap = document.getElementById("legend-wrap");
+  if (!wrap) return;
 
-  const ctrl = L.control({ position: "bottomleft" });
+  const canvas = document.getElementById("legend-canvas");
+  if (!canvas) return;
 
-  ctrl.onAdd = () => {
-    const div = L.DomUtil.create("div", "legend");
-    div.style.cssText =
-      "padding:10px 12px;background:rgba(15,23,42,.95);border-radius:12px;" +
-      "box-shadow:0 12px 32px rgba(0,0,0,.6);color:#e5e7eb;border:1px solid rgba(148,163,184,.4);";
+  // Vẽ gradient (từ colors.js)
+  window.drawHeatLegend(canvas);
 
-    const bar = `linear-gradient(to right, ${colors.join(",")})`;
+  // Update label min/max
+  const lbMin = document.getElementById("legend-min");
+  const lbMax = document.getElementById("legend-max");
 
-    const ticks = stops
-      .map((_, i) => {
-        const pct = (i / (stops.length - 1)) * 100;
-        return `<span style="position:absolute;left:${pct}%;bottom:-4px;width:1px;height:6px;background:#9ca3af;transform:translateX(-0.5px)"></span>`;
-      })
-      .join("");
-
-    const labels = `
-      <div style="display:flex;justify-content:space-between;gap:14px;flex:1;
-                  font-size:11px;font-variant-numeric:tabular-nums;color:#cbd5f5;">
-        ${stops.map((s) => `<span>${s}</span>`).join("")}
-      </div>
-      <div style="margin-left:10px;font-size:11px;color:#9ca3af;white-space:nowrap">${unit}</div>`;
-
-    div.innerHTML = `
-      <div style="font-weight:600;color:#e5e7eb;margin-bottom:6px">${title}</div>
-      <div style="position:relative;height:12px;border-radius:8px;background:${bar};
-                  box-shadow:inset 0 0 0 1px rgba(15,23,42,.6);margin-bottom:6px">${ticks}</div>
-      <div style="display:flex;align-items:center">${labels}</div>`;
-
-    L.DomEvent.disableClickPropagation(div);
-    return div;
-  };
-
-  ctrl.addTo(map);
-  rwLegend = ctrl;
+  if (lbMin) lbMin.textContent = `${window.TEMP_MIN_C}°C`;
+  if (lbMax) lbMax.textContent = `${window.TEMP_MAX_C}°C`;
 }
 
-function clearLegend() {
-  if (rwLegend) {
-    map.removeControl(rwLegend);
-    rwLegend = null;
-  }
-}
+window.initLegend = initLegend;
