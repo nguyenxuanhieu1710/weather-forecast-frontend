@@ -1,115 +1,198 @@
 <!DOCTYPE html>
 <html lang="vi" data-theme="light">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Weather Forecast VN</title>
-    <link
-      rel="stylesheet"
-      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-    />
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="https://unpkg.com/leaflet.heat/dist/leaflet-heat.js"></script>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Weather Forecast VN</title>
 
-    <style>
-      @import url("style.css");
-    </style>
-    <script src="https://unpkg.com/leaflet-pip/leaflet-pip.min.js"></script>
-    <script src="app.js" defer></script>
-  </head>
-  <body>
-    <header>
+  <!-- Leaflet -->
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+  />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet.heat/dist/leaflet-heat.js"></script>
+
+  <!-- Icon set (dùng Remix Icon cho gọn) -->
+  <link
+    rel="stylesheet"
+    href="https://cdn.jsdelivr.net/npm/remixicon@4.3.0/fonts/remixicon.css"
+  />
+
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <!-- Thanh top giống LandInvest -->
+  <header class="topbar">
+    <div class="topbar-left">
       <div class="brand">
-        <img
-          src="https://upload.wikimedia.org/wikipedia/commons/thumb/6/60/Weather_Icon_-_Forecast.png/64px-Weather_Icon_-_Forecast.png"
-          alt="logo"
-        />
-        <h1>Weather Forecast VN</h1>
+        <span class="brand-icon">☁</span>
+        <span class="brand-text">VN WEATHER</span>
       </div>
-      <button
-        id="theme-toggle"
-        class="theme-toggle"
-        aria-pressed="false"
-        title="Chuyển chế độ tối"
-      >
-        🌙
-      </button>
-    </header>
 
-    <div class="search-wrap">
-      <div class="search">
-        <button id="btn-search" class="btn" title="Tìm kiếm">🔍</button>
+      <nav class="topbar-nav">
+        <button class="nav-btn active" data-page="home">
+          <i class="ri-home-4-line"></i>
+          <span>Home</span>
+        </button>
+        <button class="nav-btn" data-page="map">
+          <i class="ri-map-2-line"></i>
+          <span>Map</span>
+        </button>
+        <button class="nav-btn" data-page="notify">
+          <i class="ri-notification-3-line"></i>
+          <span>Thông báo</span>
+        </button>
+        <button class="nav-btn" data-page="info">
+          <i class="ri-information-line"></i>
+          <span>Thông tin chung</span>
+        </button>
+      </nav>
+    </div>
+
+    <div class="topbar-right">
+      <div class="search-box">
+        <i class="ri-search-line"></i>
         <input
-          id="pac-input"
+          id="search-input"
           type="text"
-          placeholder="Nhập địa điểm cần tìm..."
-          aria-label="Tìm kiếm địa điểm"
+          placeholder="Tìm địa điểm, tỉnh/thành..."
         />
-        <div id="sg" class="suggest" hidden></div>
-        <button id="btn-locate" class="btn" title="Vị trí hiện tại">📍</button>
+      </div>
+
+      <button class="user-btn" id="btn-login">
+        <i class="ri-user-3-line"></i>
+        <span>Đăng nhập</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Layout chính: map + panel -->
+  <main class="app-main">
+    <!-- Khu vực map -->
+    <section class="map-wrapper" id="page-map">
+      <div id="map"></div>
+
+      <!-- Toolbar nổi bên phải -->
+      <div class="map-floating right">
+        <!-- ĐÃ BỎ NÚT ĐỔI NỀN -->
+        <button class="float-btn" id="btn-layer-temp">
+          <i class="ri-temp-hot-line"></i>
+        </button>
+        <button class="float-btn" id="btn-layer-rain">
+          <i class="ri-rainy-line"></i>
+        </button>
+        <button class="float-btn" id="btn-layer-wind">
+          <i class="ri-windy-line"></i>
+        </button>
+        <button class="float-btn" id="btn-my-location">
+          <i class="ri-focus-3-line"></i>
+        </button>
+      </div>
+
+      <!-- Chip menu dưới giống “QH Quận Huyện” -->
+      <div class="map-bottom-chips">
+        <button class="chip active">Nhiệt độ</button>
+        <button class="chip">Lượng mưa</button>
+        <button class="chip">Gió</button>
+        <button class="chip">Dự báo 3 ngày</button>
+        <button class="chip">Dự báo 7 ngày</button>
+      </div>
+
+      <!-- Panel chi tiết thời tiết (click vào điểm) -->
+      <div class="weather-detail" id="weather-detail">
+        <div class="detail-header">
+          <span id="detail-location">Chọn một điểm trên bản đồ</span>
+          <button id="detail-close"><i class="ri-close-line"></i></button>
+        </div>
+        <div class="detail-body">
+          <div class="detail-row">
+            <span>Thời gian:</span>
+            <strong id="detail-time">--</strong>
+          </div>
+          <div class="detail-row">
+            <span>Nhiệt độ:</span>
+            <strong id="detail-temp">--</strong>
+          </div>
+          <div class="detail-row">
+            <span>Lượng mưa:</span>
+            <strong id="detail-rain">--</strong>
+          </div>
+          <div class="detail-row">
+            <span>Gió:</span>
+            <strong id="detail-wind">--</strong>
+          </div>
+          <div class="detail-row">
+            <span>Tọa độ:</span>
+            <strong id="detail-coord">--</strong>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Trang Home -->
+    <section class="page-panel" id="page-home">
+      <h1>Tổng quan thời tiết Việt Nam</h1>
+      <p>
+        Hiển thị vài số liệu tổng quan (nhiệt độ trung bình, điểm nóng nhất,
+        điểm mát nhất, cảnh báo mưa lớn, bão, v.v.). Bạn tự gắn số liệu từ API.
+      </p>
+    </section>
+
+    <!-- Trang Thông báo -->
+    <section class="page-panel" id="page-notify">
+      <h1>Thông báo</h1>
+      <ul class="notify-list" id="notify-list">
+        <li class="notify-item">
+          <span class="tag tag-warning">Cảnh báo</span>
+          <div>
+            Mưa lớn khu vực Bắc Bộ trong 3 giờ tới. Theo dõi chi tiết trên bản đồ.
+          </div>
+        </li>
+      </ul>
+    </section>
+
+    <!-- Trang Thông tin chung -->
+    <section class="page-panel" id="page-info">
+      <h1>Thông tin chung</h1>
+      <p>
+        Giới thiệu đồ án, nguồn dữ liệu, phương pháp dự báo (ML, AI, v.v.),
+        link tài liệu, nhóm thực hiện.
+      </p>
+    </section>
+  </main>
+
+  <!-- Modal đăng nhập đơn giản -->
+  <div class="modal-backdrop" id="login-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>Đăng nhập</h2>
+        <button class="icon-btn" id="login-close">
+          <i class="ri-close-line"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <label>
+          Email
+          <input type="email" id="login-email" />
+        </label>
+        <label>
+          Mật khẩu
+          <input type="password" id="login-password" />
+        </label>
+        <button class="primary-btn" id="login-submit">Đăng nhập</button>
       </div>
     </div>
+  </div>
 
-    <div class="toolbar" role="group" aria-label="Lớp hiển thị">
-      <button class="chip" id="chip-temp">🌡 Nhiệt độ</button>
-      <button class="chip" id="chip-rain">🌧 Mưa</button>
-      <button class="chip" id="chip-wind">💨 Gió</button>
-    </div>
+  <script src="config.js"></script>
+  <script src="data.js"></script>
+  <script src="colors.js"></script>
+  <script src="legend.js"></script>
+  <script src="layers.js"></script>
+  <script src="map.js"></script>
+  <script src="ui.js"></script>
+  <script src="main.js"></script>
 
-    <aside id="sidebar" aria-live="polite">
-      <div class="sb-header">
-        <h3 class="sb-title">Chi tiết thời tiết</h3>
-        <button class="sb-close" id="sb-close" aria-label="Đóng">×</button>
-      </div>
-      <div class="stat-grid">
-        <div class="stat">
-          <div class="label">Tọa độ</div>
-          <div class="value" id="sb-coord">-- , --</div>
-        </div>
-        <div class="stat">
-          <div class="label">Nhiệt độ</div>
-          <div class="value" id="sb-temp">-- °C</div>
-        </div>
-        <div class="stat">
-          <div class="label">Mưa</div>
-          <div class="value" id="sb-rain">-- mm</div>
-        </div>
-        <div class="stat">
-          <div class="label">Gió</div>
-          <div class="value" id="sb-wind">-- m/s</div>
-        </div>
-        <div class="stat">
-          <div class="label">Độ ẩm</div>
-          <div class="value" id="sb-hum">-- %</div>
-        </div>
-      </div>
-      <small class="muted">Nguồn: /api/obs/latest.</small>
-    </aside>
-
-    <div id="map"></div>
-
-    <div class="timebar" aria-label="Thanh thời gian">
-      <div class="label" id="time-label">Hiện tại</div>
-      <input
-        id="time-range"
-        type="range"
-        min="0"
-        max="23"
-        step="1"
-        value="12"
-      />
-      <button id="btn-play" class="play" aria-pressed="false">▶️</button>
-    </div>
-    <!-- legend nhiệt độ tĩnh -->
-    <!-- đặt ở góc trái dưới như bạn đang có -->
-    <div id="legend-temp" class="legend">
-      <div class="title">Chỉ số (°C)</div>
-      <div class="bar"></div>
-      <div class="ticks"><span>Thấp</span><span>Cao</span></div>
-    </div>
-
-
-    <footer>Nguồn: OpenStreetMap · CARTO · Google</footer>
-  </body>
-  
+</body>
 </html>
