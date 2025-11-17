@@ -20,9 +20,9 @@ const WIND_FIELD_DLAT = 0.1;
 const WIND_FIELD_DLON = 0.1;
 
 // Hạt gió
-const WIND_PARTICLE_COUNT = 2000;      // số lượng hạt
-const WIND_PARTICLE_MAX_AGE = 220;     // số frame sống
-const WIND_PARTICLE_SPEED_SCALE = 0.05; // scale tốc độ -> px mỗi frame
+const WIND_PARTICLE_COUNT = 2000;        // số lượng hạt
+const WIND_PARTICLE_MAX_AGE = 220;       // số frame sống
+const WIND_PARTICLE_SPEED_SCALE = 0.05;  // scale tốc độ -> px mỗi frame
 
 // ===================== Biến toàn cục =====================
 
@@ -30,6 +30,22 @@ let windCanvasLayer = null;    // nền màu gió
 let windParticleLayer = null;  // hạt chuyển động
 let currentWindField = null;   // trường gió hiện tại
 window.currentWindField = null;
+
+// ===================== Helper chung =====================
+
+// Wrapper chung cho mask VN để tránh null / lỗi
+function isLatLngInsideVN(lat, lon) {
+  if (typeof window.isPointInsideVN === "function") {
+    try {
+      return !!window.isPointInsideVN(lat, lon);
+    } catch (e) {
+      console.warn("isPointInsideVN error:", e);
+      return true;
+    }
+  }
+  // Nếu không có mask thì cho qua, dùng toàn domain dữ liệu
+  return true;
+}
 
 // ===================== Helper toán học / dữ liệu =====================
 
@@ -48,11 +64,6 @@ function dist2DegWind(lat1, lon1, lat2, lon2) {
 function extractWindSrcPoints(cells) {
   if (!Array.isArray(cells)) return [];
 
-  const insideFn =
-    typeof window.isPointInsideVN === "function"
-      ? window.isPointInsideVN
-      : null;
-
   const src = [];
 
   for (const c of cells) {
@@ -65,7 +76,7 @@ function extractWindSrcPoints(cells) {
     const lon = Number(c.lon);
     if (!Number.isFinite(lat) || !Number.isFinite(lon)) continue;
 
-    if (insideFn && !insideFn(lat, lon)) continue;
+    if (!isLatLngInsideVN(lat, lon)) continue;
 
     const speed = Math.max(0, Number(c.wind_ms));
 
@@ -114,7 +125,7 @@ function buildWindFieldFromCells(cells) {
 
   if (!Number.isFinite(minLat)) return null;
 
-  // Mở biên ra một chút cho nền phủ kín
+  // Mở biên một chút cho nền phủ kín
   minLat -= 0.5;
   maxLat += 0.5;
   minLon -= 0.5;
@@ -451,11 +462,6 @@ const WindCanvasLayer = L.Layer.extend({
     const imgData = ctx.createImageData(w, h);
     const data = imgData.data;
 
-    const insideFn =
-      typeof window.isPointInsideVN === "function"
-        ? window.isPointInsideVN
-        : null;
-
     for (let y = 0; y < h; y += step) {
       for (let x = 0; x < w; x += step) {
         const latlng = this._map.containerPointToLatLng([
@@ -467,7 +473,7 @@ const WindCanvasLayer = L.Layer.extend({
         const lat = latlng.lat;
         const lon = latlng.lng;
 
-        if (insideFn && !insideFn(lat, lon)) continue;
+        if (!isLatLngInsideVN(lat, lon)) continue;
 
         const wVec = field.sample(lat, lon);
         if (!wVec || !Number.isFinite(wVec.s) || wVec.s <= 0.05) continue;
@@ -529,22 +535,37 @@ const WindParticleLayer = L.Layer.extend({
   },
 
   _bindEvents: function () {
-    this._onResize = this._handleResize.bind(this);
-    this._onMove = this._resetParticles.bind(this);
-    this._map.on("resize", this._onResize);
-    this._map.on("moveend", this._onMove);
+    this._onResize    = this._handleResize.bind(this);
+    this._onMoveStart = this._handleMoveStart.bind(this);
+    this._onMoveEnd   = this._handleMoveEnd.bind(this);
+
+    this._map.on("resize",    this._onResize);
+    this._map.on("movestart", this._onMoveStart); // bắt đầu kéo map
+    this._map.on("moveend",   this._onMoveEnd);   // thả map
   },
 
   _unbindEvents: function () {
     if (!this._map) return;
-    this._map.off("resize", this._onResize);
-    this._map.off("moveend", this._onMove);
+    this._map.off("resize",    this._onResize);
+    this._map.off("movestart", this._onMoveStart);
+    this._map.off("moveend",   this._onMoveEnd);
   },
 
   _handleResize: function () {
     const size = this._map.getSize();
     this._canvas.width = size.x;
     this._canvas.height = size.y;
+    this._resetParticles();
+  },
+
+  _handleMoveStart: function () {
+    // bắt đầu kéo map: xóa toàn bộ vệt cũ để không bị lệch
+    if (!this._ctx || !this._canvas) return;
+    this._ctx.clearRect(0, 0, this._canvas.width, this._canvas.height);
+  },
+
+  _handleMoveEnd: function () {
+    // thả map: sinh lại hạt theo viewport mới
     this._resetParticles();
   },
 
@@ -558,9 +579,31 @@ const WindParticleLayer = L.Layer.extend({
   },
 
   _randomParticle: function (size) {
+    let x = Math.random() * size.x;
+    let y = Math.random() * size.y;
+
+    // Nếu có mask VN thì chỉ spawn hạt bên trong VN
+    if (this._map) {
+      let ok = false;
+      for (let i = 0; i < 30; i++) {
+        x = Math.random() * size.x;
+        y = Math.random() * size.y;
+        const ll = this._map.containerPointToLatLng([x, y]);
+        if (ll && isLatLngInsideVN(ll.lat, ll.lng)) {
+          ok = true;
+          break;
+        }
+      }
+      // nếu thử 30 lần vẫn trượt thì chấp nhận vị trí random cuối
+      if (!ok) {
+        x = Math.random() * size.x;
+        y = Math.random() * size.y;
+      }
+    }
+
     return {
-      x: Math.random() * size.x,
-      y: Math.random() * size.y,
+      x,
+      y,
       age: Math.floor(Math.random() * WIND_PARTICLE_MAX_AGE),
       justRespawned: true,
     };
@@ -577,7 +620,6 @@ const WindParticleLayer = L.Layer.extend({
   _evolveParticle: function (p, size) {
     const field = window.currentWindField;
     if (!field || !this._map) {
-      // Không có trường gió → kill hạt
       p.age = WIND_PARTICLE_MAX_AGE + 1;
       p.justRespawned = false;
       return;
@@ -590,6 +632,12 @@ const WindParticleLayer = L.Layer.extend({
 
     const latlng = this._map.containerPointToLatLng([p.x, p.y]);
     if (!latlng) {
+      this._respawnParticle(p, size);
+      return;
+    }
+
+    // Nếu đang ở ngoài VN thì respawn ngay
+    if (!isLatLngInsideVN(latlng.lat, latlng.lng)) {
       this._respawnParticle(p, size);
       return;
     }
@@ -610,7 +658,15 @@ const WindParticleLayer = L.Layer.extend({
     const nx = p.x + dx;
     const ny = p.y + dy;
 
+    // ra ngoài canvas thì respawn
     if (nx < 0 || ny < 0 || nx >= size.x || ny >= size.y) {
+      this._respawnParticle(p, size);
+      return;
+    }
+
+    // kiểm tra vị trí mới có còn trong VN không
+    const ll2 = this._map.containerPointToLatLng([nx, ny]);
+    if (!ll2 || !isLatLngInsideVN(ll2.lat, ll2.lng)) {
       this._respawnParticle(p, size);
       return;
     }

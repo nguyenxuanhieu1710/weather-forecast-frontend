@@ -55,8 +55,13 @@ function setupLayerButtons() {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
-  if (typeof window.initMap === "function") {
-    window.initMap();
-  }
-  setupLayerButtons();
+  if (typeof window.initMap === "function") {
+    window.initMap();
+  }
+
+  if (typeof window.initSearch === "function") {
+    window.initSearch();
+  }
+
+  setupLayerButtons();
 });

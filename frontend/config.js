@@ -3,10 +3,15 @@
 // Nếu API của bạn đang không có prefix /api, sửa dòng này lại cho đúng:
 const API_BASE = "http://100.123.92.116:8000/api";
 
+// LocationIQ search
+const LQ_KEY = "pk.c4d167c79573b11c6022ab79ad7fd9a0";
+const LQ_REGION = "us1";
+
 const TEMP_TTL_MS = 3 * 60 * 1000; // 3 phút
 
 const TEMP_MIN_C = 10;
 const TEMP_MAX_C = 40;
+
 
 /**
  * @typedef {Object} ObsCell

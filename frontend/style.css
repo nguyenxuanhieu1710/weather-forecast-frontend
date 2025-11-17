@@ -469,3 +469,32 @@ body {
   filter: drop-shadow(0 0 2px rgba(0,0,0,0.6));
   transform-origin: 0% 50%; /* quay quanh gốc mũi tên */
 }
+
+/* Hộp gợi ý tìm kiếm */
+.search-suggest {
+  position: absolute;
+  background: rgba(15, 23, 42, 0.96);   /* nền xanh đen đậm */
+  color: #e5e7eb;                        /* chữ xám nhạt dễ đọc */
+  border-radius: 10px;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.7);
+  border: 1px solid rgba(148, 163, 184, 0.7);
+  padding: 4px 0;
+  max-height: 260px;
+  overflow-y: auto;
+  font-size: 13px;
+  z-index: 9999;
+}
+
+/* Từng dòng gợi ý */
+.search-suggest > div {
+  padding: 6px 10px;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Hover cho từng dòng */
+.search-suggest > div:hover {
+  background: rgba(59, 130, 246, 0.28);  /* xanh dương nhạt */
+}
