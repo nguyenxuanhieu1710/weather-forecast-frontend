@@ -455,3 +455,17 @@ body {
     left: 12px;
   }
 }
+
+.wind-arrow-icon {
+  /* không cần background, Leaflet sẽ dùng HTML bên trong */
+}
+
+.wind-arrow {
+  width: 0;
+  height: 0;
+  border-top: 7px solid transparent;
+  border-bottom: 7px solid transparent;
+  border-left: 18px solid rgba(255, 255, 255, 0.95); /* thân mũi */
+  filter: drop-shadow(0 0 2px rgba(0,0,0,0.6));
+  transform-origin: 0% 50%; /* quay quanh gốc mũi tên */
+}
