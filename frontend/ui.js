@@ -58,17 +58,20 @@ function updateWeatherDetail(clickLat, clickLon, nearestResult, cell) {
 
   // Tọa độ click
   if (elCoord) {
-    elCoord.textContent =
-      `${clickLat.toFixed(4)}, ${clickLon.toFixed(4)}`;
+    elCoord.textContent = `${clickLat.toFixed(4)}, ${clickLon.toFixed(4)}`;
   }
 
   // Tiêu đề: điểm gần nhất
   if (elTitle) {
-    if (nearestResult && nearestResult.found &&
-        typeof nearestResult.lat === "number" &&
-        typeof nearestResult.lon === "number") {
-      elTitle.textContent =
-        `Điểm gần nhất: ${nearestResult.lat.toFixed(4)}, ${nearestResult.lon.toFixed(4)}`;
+    if (
+      nearestResult &&
+      nearestResult.found &&
+      typeof nearestResult.lat === "number" &&
+      typeof nearestResult.lon === "number"
+    ) {
+      elTitle.textContent = `Điểm gần nhất: ${nearestResult.lat.toFixed(
+        4
+      )}, ${nearestResult.lon.toFixed(4)}`;
     } else {
       elTitle.textContent = "Không có dữ liệu gần điểm này";
     }
@@ -294,6 +297,84 @@ function initSearch() {
   window.doSearchLocation = doSearch;
 }
 
+// ===================== GPS / Geolocation =====================
+
+function initGPS() {
+  const btn = document.getElementById("btn-gps");
+  if (!btn) {
+    console.error("Không tìm thấy #btn-gps trong DOM");
+    return;
+  }
+
+  if (!navigator.geolocation) {
+    console.warn("Trình duyệt không hỗ trợ Geolocation");
+    btn.disabled = true;
+    btn.title = "Trình duyệt không hỗ trợ định vị";
+    return;
+  }
+
+  let isBusy = false;
+
+  btn.addEventListener("click", () => {
+    if (isBusy) return;
+    isBusy = true;
+    btn.classList.add("loading");
+
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        isBusy = false;
+        btn.classList.remove("loading");
+
+        const lat = pos.coords.latitude;
+        const lon = pos.coords.longitude;
+
+        if (!window.map) {
+          console.error("Map chưa sẵn sàng");
+          return;
+        }
+
+        const curZoom = map.getZoom ? map.getZoom() : 5;
+        const targetZoom = Math.max(curZoom, 11);
+
+        map.flyTo([lat, lon], targetZoom);
+
+        // Marker cho vị trí hiện tại
+        if (window.currentGPSMarker) {
+          map.removeLayer(window.currentGPSMarker);
+        }
+
+        window.currentGPSMarker = L.circleMarker([lat, lon], {
+          radius: 7,
+          weight: 2,
+          fillOpacity: 0.85,
+        })
+          .addTo(map)
+          .bindPopup("<b>Vị trí hiện tại của bạn</b>")
+          .openPopup();
+
+        // Nếu muốn, có thể gọi backend nearest tại đây
+        // fetch(`${API_BASE}/obs/nearest?lat=${lat}&lon=${lon}`)
+        //   .then((r) => r.json())
+        //   .then((j) => { ... cập nhật panel chi tiết ... })
+        //   .catch((e) => console.error(e));
+      },
+      (err) => {
+        isBusy = false;
+        btn.classList.remove("loading");
+        console.error("Geolocation error:", err);
+        alert(
+          "Không lấy được vị trí GPS. Hãy bật quyền truy cập vị trí cho trình duyệt."
+        );
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 60000,
+      }
+    );
+  });
+}
+
 // Export global
 window.showLoading = showLoading;
 window.setObsTimeLabel = setObsTimeLabel;
@@ -301,11 +382,4 @@ window.showSnapshotStatus = showSnapshotStatus;
 window.updateWeatherDetail = updateWeatherDetail;
 window.toggleControls = toggleControls;
 window.initSearch = initSearch;
-
-
-// Export global
-window.showLoading = showLoading;
-window.setObsTimeLabel = setObsTimeLabel;
-window.showSnapshotStatus = showSnapshotStatus;
-window.updateWeatherDetail = updateWeatherDetail;
-window.toggleControls = toggleControls;
+window.initGPS = initGPS;

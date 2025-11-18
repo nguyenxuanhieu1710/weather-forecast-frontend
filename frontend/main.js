@@ -63,5 +63,10 @@ document.addEventListener("DOMContentLoaded", () => {
     window.initSearch();
   }
 
+  if (typeof window.initGPS === "function") {
+    window.initGPS();
+  }
+
   setupLayerButtons();
 });
+

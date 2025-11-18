@@ -125,6 +125,47 @@ body {
   width: 100%;
 }
 
+.search-box {
+  position: relative;
+}
+
+/* Nút GPS nằm bên phải ô input */
+.gps-btn {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  border: none;
+  background: rgba(15, 23, 42, 0.95);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+  outline: none;
+  box-shadow: 0 0 0 1px rgba(148, 163, 184, 0.7);
+}
+
+.gps-btn i {
+  font-size: 15px;
+  color: #e5e7eb;
+}
+
+.gps-btn:hover {
+  background: rgba(37, 99, 235, 0.9);
+}
+
+.gps-btn.loading {
+  opacity: 0.6;
+  cursor: default;
+}
+
+
+
+
 .user-btn {
   display: inline-flex;
   align-items: center;
