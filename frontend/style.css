@@ -163,9 +163,6 @@ body {
   cursor: default;
 }
 
-
-
-
 .user-btn {
   display: inline-flex;
   align-items: center;
@@ -335,9 +332,29 @@ body {
   display: none;
 }
 
-.page-panel h1 {
-  font-size: 22px;
+/* header cho page-panel: tiêu đề + nút đóng */
+.page-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   margin-bottom: 12px;
+}
+
+.page-panel-header h1 {
+  font-size: 22px;
+  margin-bottom: 0; /* ghi đè rule cũ */
+}
+
+.page-close {
+  border: none;
+  background: transparent;
+  color: #9ca3af;
+  cursor: pointer;
+  font-size: 18px;
+}
+
+.page-close:hover {
+  color: #e5e7eb;
 }
 
 .page-panel p {
@@ -345,7 +362,310 @@ body {
   color: #cbd5f5;
 }
 
-/* Thông báo */
+
+/* ====== Alerts page ====== */
+
+.page-subtitle {
+  font-size: 13px;
+  color: #9ca3af;
+  margin-bottom: 14px;
+}
+
+.alerts-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* Card cảnh báo */
+
+.alert-card {
+  background: #020617;
+  border-radius: 14px;
+  padding: 10px 12px;
+  border: 1px solid rgba(148, 163, 184, 0.7);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.7);
+  font-size: 13px;
+}
+
+.alert-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+.alert-title {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.alert-location {
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+.alert-badge {
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+/* màu theo mức độ */
+
+.alert-high .alert-badge {
+  background: #ef4444;
+  color: #f9fafb;
+}
+
+.alert-medium .alert-badge {
+  background: #fbbf24;
+  color: #111827;
+}
+
+.alert-low .alert-badge {
+  background: #3b82f6;
+  color: #f9fafb;
+}
+
+.alert-message {
+  margin: 2px 0 4px 0;
+}
+
+.alert-meta {
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+/* ====== Alerts page – layout giống AccuWeather ====== */
+
+.alerts-container {
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+/* CARD THỜI TIẾT HIỆN TẠI */
+
+.alert-current-card {
+  background: #e5e7eb;              /* nền sáng giống AccuWeather */
+  color: #111827;
+  border-radius: 14px;
+  padding: 14px 18px 16px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+  margin-bottom: 14px;
+}
+
+.alert-current-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid #d1d5db;
+  padding-bottom: 6px;
+  margin-bottom: 10px;
+}
+
+.alert-current-title {
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.alert-current-time {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.alert-current-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1.1fr);
+  gap: 16px;
+}
+
+/* bên trái */
+
+.alert-current-left {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.alert-icon-placeholder {
+  width: 56px;
+  height: 56px;
+  border-radius: 999px;
+  background: #dbeafe;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 4px;
+}
+
+.alert-icon-placeholder i {
+  font-size: 32px;
+  color: #2563eb;
+}
+
+.alert-temp-main {
+  display: flex;
+  align-items: flex-start;
+  line-height: 1;
+}
+
+.alert-temp-main span#alert-temp-value {
+  font-size: 44px;
+  font-weight: 700;
+}
+
+.alert-temp-unit {
+  font-size: 24px;
+  margin-left: 2px;
+  margin-top: 4px;
+}
+
+.alert-temp-feel {
+  font-size: 13px;
+  color: #4b5563;
+}
+
+.alert-condition {
+  font-size: 14px;
+  font-weight: 600;
+  margin-top: 2px;
+}
+
+.alert-more-btn {
+  margin-top: 6px;
+  border: none;
+  background: transparent;
+  color: #2563eb;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  padding: 0;
+  cursor: pointer;
+}
+
+/* bên phải */
+
+.alert-current-right {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+}
+
+.alert-metric-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 3px 0;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.alert-metric-row:last-child {
+  border-bottom: none;
+}
+
+.alert-metric-row span:first-child {
+  color: #4b5563;
+}
+
+.alert-metric-row span:last-child {
+  font-weight: 600;
+}
+
+/* AQI màu xanh giống chữ "Vừa phải" */
+
+.alert-aqi-good {
+  color: #16a34a;
+}
+
+/* CARD MINUTECAST */
+
+.minute-card {
+  background: #f3f4f6;
+  color: #111827;
+  border-radius: 14px;
+  padding: 12px 18px 14px;
+  margin-bottom: 16px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+}
+
+.minute-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.minute-title {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #6b7280;
+}
+
+.minute-subtime {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.minute-text {
+  font-size: 14px;
+  margin-bottom: 8px;
+}
+
+.minute-bar {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: #4b5563;
+}
+
+.minute-label-left,
+.minute-label-right {
+  white-space: nowrap;
+}
+
+.minute-bar-track {
+  display: flex;
+  align-items: center;
+  gap: 1px;
+  background: #e5e7eb;
+  border-radius: 999px;
+  padding: 3px 4px;
+}
+
+.minute-seg {
+  flex: 1;
+  height: 10px;
+  border-radius: 2px;
+  background: #e5e7eb; /* level-0 */
+}
+
+/* màu intensity tăng dần như thanh vàng/ xanh lá của AccuWeather */
+.minute-seg.level-1 {
+  background: #facc15;
+}
+.minute-seg.level-2 {
+  background: #f59e0b;
+}
+.minute-seg.level-3 {
+  background: #ea580c;
+}
+
+/* LIST CÁC CẢNH BÁO KHÁC (đã định nghĩa alert-card/alert-high ở style trước) */
+/* nếu chưa có thì giữ block đã gửi lần trước: .alert-card, .alert-high,... */
+
+
+/* ========= Thông báo ========= */
 
 .notify-list {
   list-style: none;
@@ -539,3 +859,32 @@ body {
 .search-suggest > div:hover {
   background: rgba(59, 130, 246, 0.28);  /* xanh dương nhạt */
 }
+
+.weather-timeseries {
+  position: absolute;
+  right: 20px;
+  bottom: 20px;
+  width: 340px;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 0 12px rgba(0,0,0,0.2);
+  padding: 12px;
+  z-index: 3000;
+}
+
+.ts-header {
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.ts-chart-block {
+  margin-top: 10px;
+}
+
+.ts-label {
+  font-size: 12px;
+  margin-bottom: 2px;
+  color: #444;
+}
+
+

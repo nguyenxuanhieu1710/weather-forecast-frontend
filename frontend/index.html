@@ -13,7 +13,7 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://unpkg.com/leaflet.heat/dist/leaflet-heat.js"></script>
 
-  <!-- Icon set (dùng Remix Icon cho gọn) -->
+  <!-- Icon set -->
   <link
     rel="stylesheet"
     href="https://cdn.jsdelivr.net/npm/remixicon@4.3.0/fonts/remixicon.css"
@@ -21,8 +21,9 @@
 
   <link rel="stylesheet" href="style.css" />
 </head>
+
 <body>
-  <!-- Thanh top giống LandInvest -->
+  <!-- TOP BAR -->
   <header class="topbar">
     <div class="topbar-left">
       <div class="brand">
@@ -31,13 +32,13 @@
       </div>
 
       <nav class="topbar-nav">
-        <button class="nav-btn active" data-page="home">
+        <button class="nav-btn" data-page="home">
           <i class="ri-home-4-line"></i>
           <span>Home</span>
         </button>
-        <button class="nav-btn" data-page="map">
+        <button class="nav-btn" data-page="alerts">
           <i class="ri-map-2-line"></i>
-          <span>Map</span>
+          <span>Cảnh báo</span>
         </button>
         <button class="nav-btn" data-page="notify">
           <i class="ri-notification-3-line"></i>
@@ -52,33 +53,27 @@
 
     <div class="search-box">
       <i class="ri-search-line"></i>
-      <input
-        id="search-input"
-        type="text"
-        placeholder="Tìm địa điểm, tỉnh/thành..."
-      />
+      <input id="search-input" type="text" placeholder="Tìm địa điểm, tỉnh/thành..." />
       <button id="btn-gps" class="gps-btn" type="button" title="Định vị vị trí hiện tại">
         <i class="ri-crosshair-2-line"></i>
       </button>
     </div>
 
-
-      <button class="user-btn" id="btn-login">
-        <i class="ri-user-3-line"></i>
-        <span>Đăng nhập</span>
-      </button>
-    </div>
+    <button class="user-btn" id="btn-login">
+      <i class="ri-user-3-line"></i>
+      <span>Đăng nhập</span>
+    </button>
   </header>
 
-  <!-- Layout chính: map + panel -->
+  <!-- MAIN -->
   <main class="app-main">
-    <!-- Khu vực map -->
+
+    <!-- MAP PAGE (nền bản đồ luôn nằm sau, JS sẽ ẩn/hiện overlay phía trên) -->
     <section class="map-wrapper" id="page-map">
       <div id="map"></div>
 
-      <!-- Toolbar nổi bên phải -->
+      <!-- FLOATING TOOLBAR -->
       <div class="map-floating right">
-        <!-- ĐÃ BỎ NÚT ĐỔI NỀN -->
         <button class="float-btn" id="btn-layer-temp">
           <i class="ri-temp-hot-line"></i>
         </button>
@@ -93,18 +88,7 @@
         </button>
       </div>
 
-      
-      <!-- Chip menu dưới giống “QH Quận Huyện”
-      <div class="map-bottom-chips">
-        <button class="chip active">Nhiệt độ</button>
-        <button class="chip">Lượng mưa</button>
-        <button class="chip">Gió</button>
-        <button class="chip">Dự báo 3 ngày</button>
-        <button class="chip">Dự báo 7 ngày</button>
-      </div> -->
-      
-
-      <!-- Panel chi tiết thời tiết (click vào điểm) -->
+      <!-- WEATHER DETAIL -->
       <div class="weather-detail" id="weather-detail">
         <div class="detail-header">
           <span id="detail-location">Chọn một điểm trên bản đồ</span>
@@ -128,46 +112,240 @@
             <strong id="detail-wind">--</strong>
           </div>
           <div class="detail-row">
-            <span>Tọa độ:</span>
+            <span>Hướng gió:</span>
+            <strong id="detail-wind-dir">--</strong>
+          </div>
+          <div class="detail-row">
+            <span>Độ ẩm:</span>
+            <strong id="detail-rh">--</strong>
+          </div>
+          <div class="detail-row">
+            <span>Mây:</span>
+            <strong id="detail-cloud">--</strong>
+          </div>
+          <div class="detail-row">
+            <span>Áp suất bề mặt:</span>
+            <strong id="detail-pressure">--</strong>
+          </div>
+          <div class="detail-row">
+            <span>Tọa độ click:</span>
             <strong id="detail-coord">--</strong>
           </div>
+          <div class="detail-row">
+            <span>Điểm gần nhất:</span>
+            <strong id="detail-nearest">--</strong>
+          </div>
+        </div>
+      </div>
+
+      <!-- TIMESERIES PANEL -->
+      <div class="weather-timeseries" id="timeseries-panel" style="display:none;">
+        <div class="ts-header">
+          <span id="ts-location-name"></span>
+          <span id="ts-status" style="margin-left:6px;font-size:12px;color:#666"></span>
+        </div>
+
+        <div id="ts-summary" style="font-size:13px;margin-top:4px;"></div>
+
+        <div class="ts-chart-block">
+          <div class="ts-label">Nhiệt độ (°C)</div>
+          <canvas id="ts-temp" width="320" height="80"></canvas>
+        </div>
+
+        <div class="ts-chart-block">
+          <div class="ts-label">Tốc độ gió (m/s)</div>
+          <canvas id="ts-wind" width="320" height="80"></canvas>
+        </div>
+
+        <div class="ts-chart-block">
+          <div class="ts-label">Lượng mưa (mm)</div>
+          <canvas id="ts-rain" width="320" height="60"></canvas>
         </div>
       </div>
     </section>
 
-    <!-- Trang Home -->
+    <!-- HOME PAGE -->
     <section class="page-panel" id="page-home">
+    <div class="page-panel-header">
       <h1>Tổng quan thời tiết Việt Nam</h1>
-      <p>
-        Hiển thị vài số liệu tổng quan (nhiệt độ trung bình, điểm nóng nhất,
-        điểm mát nhất, cảnh báo mưa lớn, bão, v.v.). Bạn tự gắn số liệu từ API.
-      </p>
-    </section>
+      <button class="page-close" data-close-page="home">
+        <i class="ri-close-line"></i>
+      </button>
+    </div>
+    <p>
+      Hiển thị vài số liệu tổng quan...
+    </p>
+  </section>
 
-    <!-- Trang Thông báo -->
-    <section class="page-panel" id="page-notify">
-      <h1>Thông báo</h1>
-      <ul class="notify-list" id="notify-list">
-        <li class="notify-item">
-          <span class="tag tag-warning">Cảnh báo</span>
-          <div>
-            Mưa lớn khu vực Bắc Bộ trong 3 giờ tới. Theo dõi chi tiết trên bản đồ.
+    <!-- ALERTS PAGE – KHỐI CẢNH BÁO NẰM TRONG TRANG -->
+    <!-- ALERTS PAGE – KHỐI CẢNH BÁO NẰM TRONG TRANG -->
+<section class="page-panel" id="page-alerts">
+  <div class="page-panel-header">
+    <h1>Cảnh báo thời tiết</h1>
+    <button class="page-close" data-close-page="alerts">
+      <i class="ri-close-line"></i>
+    </button>
+  </div>
+
+  <div class="alerts-container">
+    <!-- CARD THỜI TIẾT HIỆN TẠI -->
+    <div class="alert-current-card">
+      <div class="alert-current-header">
+        <span class="alert-current-title">Thời tiết hiện tại</span>
+        <span class="alert-current-time" id="alert-current-time">10:54</span>
+      </div>
+
+      <div class="alert-current-body">
+        <!-- BÊN TRÁI: ICON + NHIỆT ĐỘ LỚN -->
+        <div class="alert-current-left">
+          <div class="alert-icon-placeholder">
+            <!-- sau này bạn thay bằng icon thật -->
+            <i class="ri-cloudy-2-line"></i>
           </div>
-        </li>
-      </ul>
-    </section>
+          <div class="alert-temp-main">
+            <span id="alert-temp-value">15</span>
+            <span class="alert-temp-unit">°C</span>
+          </div>
+          <div class="alert-temp-feel">
+            RealFeel® <span id="alert-temp-feel">14°</span>
+          </div>
+          <div class="alert-condition" id="alert-condition">
+            Có mây
+          </div>
+          <button class="alert-more-btn" type="button">
+            CHI TIẾT THÊM
+          </button>
+        </div>
 
-    <!-- Trang Thông tin chung -->
-    <section class="page-panel" id="page-info">
-      <h1>Thông tin chung</h1>
-      <p>
-        Giới thiệu đồ án, nguồn dữ liệu, phương pháp dự báo (ML, AI, v.v.),
-        link tài liệu, nhóm thực hiện.
+        <!-- BÊN PHẢI: BẢNG CHỈ SỐ -->
+        <div class="alert-current-right">
+          <div class="alert-metric-row">
+            <span>RealFeel Shade™</span>
+            <span id="alert-shade">13°</span>
+          </div>
+          <div class="alert-metric-row">
+            <span>Gió</span>
+            <span id="alert-wind">B 17 km/h</span>
+          </div>
+          <div class="alert-metric-row">
+            <span>Gió giật mạnh</span>
+            <span id="alert-gust">32 km/h</span>
+          </div>
+          <div class="alert-metric-row">
+            <span>Chất lượng không khí</span>
+            <span id="alert-aqi" class="alert-aqi-good">Vừa phải</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CARD MINUTECAST (MƯA TRONG 60 PHÚT TỚI) -->
+    <div class="minute-card">
+      <div class="minute-header">
+        <span class="minute-title">MINUTECAST™</span>
+        <span class="minute-subtime" id="minute-range">Trong 60 phút tới</span>
+      </div>
+      <p class="minute-text" id="minute-text">
+        Mưa kéo dài trong ít nhất 60 phút.
       </p>
-    </section>
+      <div class="minute-bar">
+        <span class="minute-label-left">Bây giờ</span>
+        <div class="minute-bar-track">
+          <!-- 24 cột 2.5 phút/cột, chỉ là demo tĩnh -->
+          <!-- Nhạt → đậm để giống AccuWeather -->
+          <div class="minute-seg level-1"></div>
+          <div class="minute-seg level-1"></div>
+          <div class="minute-seg level-2"></div>
+          <div class="minute-seg level-2"></div>
+          <div class="minute-seg level-3"></div>
+          <div class="minute-seg level-3"></div>
+          <div class="minute-seg level-3"></div>
+          <div class="minute-seg level-3"></div>
+          <div class="minute-seg level-2"></div>
+          <div class="minute-seg level-2"></div>
+          <div class="minute-seg level-1"></div>
+          <div class="minute-seg level-1"></div>
+          <div class="minute-seg level-0"></div>
+          <div class="minute-seg level-0"></div>
+          <div class="minute-seg level-0"></div>
+          <div class="minute-seg level-0"></div>
+          <div class="minute-seg level-0"></div>
+          <div class="minute-seg level-0"></div>
+          <div class="minute-seg level-0"></div>
+          <div class="minute-seg level-0"></div>
+          <div class="minute-seg level-0"></div>
+          <div class="minute-seg level-0"></div>
+          <div class="minute-seg level-0"></div>
+          <div class="minute-seg level-0"></div>
+        </div>
+        <span class="minute-label-right" id="minute-end-time">+60′</span>
+      </div>
+    </div>
+
+    <!-- DANH SÁCH CÁC CẢNH BÁO KHÁC (NẾU CÓ) -->
+    <div class="alerts-list" id="alerts-list">
+      <!-- JS sau này sẽ append các thẻ .alert-card vào đây -->
+      <!-- Ví dụ mẫu tĩnh: -->
+      <!--
+      <div class="alert-card alert-high">
+        <div class="alert-card-header">
+          <div class="alert-title">Mưa rất to</div>
+          <div class="alert-badge">CAO</div>
+        </div>
+        <p class="alert-message">
+          Lượng mưa lớn tại Bắc Bộ, nguy cơ ngập úng ở vùng trũng thấp.
+        </p>
+        <div class="alert-meta">
+          Ghi nhận tại 12 điểm quan trắc · Cập nhật 10:40
+        </div>
+      </div>
+      -->
+    </div>
+  </div>
+</section>
+
+    <p class="page-subtitle">
+      Các điều kiện thời tiết đáng chú ý được tổng hợp từ mạng lưới quan trắc.
+    </p>
+    <div id="alerts-list" class="alerts-list">
+      <!-- JS sẽ render danh sách cảnh báo vào đây -->
+    </div>
+  </section>
+
+
+    <!-- NOTIFY PAGE -->
+    <section class="page-panel" id="page-notify">
+    <div class="page-panel-header">
+      <h1>Thông báo</h1>
+      <button class="page-close" data-close-page="notify">
+        <i class="ri-close-line"></i>
+      </button>
+    </div>
+    <ul class="notify-list" id="notify-list">
+      <li class="notify-item">
+        <span class="tag tag-warning">Cảnh báo</span>
+        <div>Mưa lớn khu vực Bắc Bộ trong 3 giờ tới.</div>
+      </li>
+    </ul>
+  </section>
+
+
+    <!-- INFO PAGE -->
+    <section class="page-panel" id="page-info">
+    <div class="page-panel-header">
+      <h1>Thông tin chung</h1>
+      <button class="page-close" data-close-page="info">
+        <i class="ri-close-line"></i>
+      </button>
+    </div>
+    <p>
+      Giới thiệu đồ án...
+    </p>
+</section>
+
   </main>
 
-  <!-- Modal đăng nhập đơn giản -->
+  <!-- LOGIN MODAL -->
   <div class="modal-backdrop" id="login-modal">
     <div class="modal">
       <div class="modal-header">
@@ -190,23 +368,23 @@
     </div>
   </div>
 
-<script src="config.js"></script>
-<script src="data.js"></script>
-<script src="colors.js"></script>
-<script src="legend.js"></script>
-<script src="layers.js"></script>
-<script src="layers_rain.js"></script> 
-<script src="layers_wind.js"></script> 
-<script src="wind_config.js"></script> 
-<script src="wind_field.js"></script> 
-<script src="wind_canvas_layer.js"></script> 
-<script src="wind_particle_layer.js"></script> 
-<script src="wind_controls.js"></script> 
-<script src="map.js"></script>
-<script src="ui.js"></script>
-<script src="main.js"></script>
-
-
+  <!-- SCRIPTS -->
+  <script src="config.js"></script>
+  <script src="data.js"></script>
+  <script src="colors.js"></script>
+  <script src="legend.js"></script>
+  <script src="layers.js"></script>
+  <script src="layers_rain.js"></script>
+  <script src="layers_wind.js"></script>
+  <script src="wind_config.js"></script>
+  <script src="wind_field.js"></script>
+  <script src="wind_canvas_layer.js"></script>
+  <script src="wind_particle_layer.js"></script>
+  <script src="wind_controls.js"></script>
+  <script src="api.js"></script>
+  <script src="map.js"></script>
+  <script src="ui.js"></script>
+  <script src="main.js"></script>
 
 </body>
 </html>
