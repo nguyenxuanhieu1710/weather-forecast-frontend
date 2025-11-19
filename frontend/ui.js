@@ -520,31 +520,47 @@ function initGPS() {
           return;
         }
 
+        // 1. Di chuyển map
         const curZoom = map.getZoom ? map.getZoom() : 5;
         const targetZoom = Math.max(curZoom, 11);
-
         map.flyTo([lat, lon], targetZoom);
 
+        // 2. Marker vị trí hiện tại
         if (window.currentGPSMarker) {
           map.removeLayer(window.currentGPSMarker);
         }
 
         window.currentGPSMarker = L.circleMarker([lat, lon], {
-          radius: 7,
+          radius: 8,
+          color: "#3388ff",
           weight: 2,
+          fillColor: "#3388ff",
           fillOpacity: 0.85,
         })
           .addTo(map)
-          .bindPopup("<b>Vị trí hiện tại của bạn</b>")
+          .bindPopup(
+            `<b>Vị trí của bạn</b><br>Lat: ${lat.toFixed(
+              4
+            )}<br>Lon: ${lon.toFixed(4)}`
+          )
           .openPopup();
+
+        // 3. Giả lập click vào map tại đúng vị trí GPS
+        //    → chạy initMapClickForTimeseries() trong main.js
+        if (typeof map.fire === "function" && typeof L !== "undefined") {
+          map.fire("click", { latlng: L.latLng(lat, lon) });
+        }
       },
       (err) => {
         isBusy = false;
         btn.classList.remove("loading");
         console.error("Geolocation error:", err);
-        alert(
-          "Không lấy được vị trí GPS. Hãy bật quyền truy cập vị trí cho trình duyệt."
-        );
+
+        let msg = "Không lấy được vị trí GPS.";
+        if (err.code === 1) msg += " Bạn đã chặn quyền truy cập vị trí.";
+        if (err.code === 2) msg += " Vị trí không khả dụng.";
+        if (err.code === 3) msg += " Quá thời gian chờ.";
+        alert(msg);
       },
       {
         enableHighAccuracy: true,
@@ -555,19 +571,7 @@ function initGPS() {
   });
 }
 
-// Export global
-window.showLoading = showLoading;
-window.setObsTimeLabel = setObsTimeLabel;
-window.showSnapshotStatus = showSnapshotStatus;
-window.updateWeatherDetail = updateWeatherDetail;
-window.initSearch = initSearch;
-window.initGPS = initGPS;
 
-// Export thêm cho timeseries
-window.setTimeseriesStatus = setTimeseriesStatus;
-window.setTimeseriesLocationName = setTimeseriesLocationName;
-window.setTimeseriesSummary = setTimeseriesSummary;
-window.renderTimeseriesCharts = renderTimeseriesCharts;
 
 // ================= CẢNH BÁO THỜI TIẾT =================
 

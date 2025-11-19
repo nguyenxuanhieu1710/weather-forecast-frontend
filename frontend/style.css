@@ -888,3 +888,311 @@ body {
 }
 
 
+/* === Notify Panel Styling === */
+.page-panel {
+    /* Giữ nguyên style cũ của bạn cho panel */
+    display: flex;
+    flex-direction: column;
+}
+
+/* Header và Filter */
+.page-panel-header h1 {
+    font-size: 1.2rem;
+    font-weight: 700;
+}
+
+.notify-filter {
+    padding: 0 16px 12px;
+    display: flex;
+    gap: 10px;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+.notify-filter button {
+    background: transparent;
+    border: 1px solid rgba(255,255,255,0.2);
+    color: #ccc;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.notify-filter button.active,
+.notify-filter button:hover {
+    background: #3b82f6; /* Màu xanh chủ đạo */
+    border-color: #3b82f6;
+    color: white;
+}
+
+/* Content Wrapper để scroll */
+.notify-content-wrapper {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+}
+
+.notify-group-label {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    color: #6b7280;
+    margin-bottom: 10px;
+    margin-top: 10px;
+    font-weight: 600;
+}
+
+/* List Items */
+.notify-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.notify-item {
+    display: flex;
+    gap: 12px;
+    background: rgba(255,255,255,0.03);
+    padding: 12px;
+    border-radius: 8px;
+    margin-bottom: 10px;
+    border-left: 3px solid transparent; /* Đường viền màu phân loại */
+    transition: background 0.2s;
+}
+
+.notify-item:hover {
+    background: rgba(255,255,255,0.07);
+}
+
+/* Phân loại màu sắc item */
+.notify-item.type-danger {
+    border-left-color: #ef4444; /* Đỏ */
+}
+.notify-item.type-danger .notify-icon {
+    background: rgba(239, 68, 68, 0.2);
+    color: #ef4444;
+}
+
+.notify-item.type-warning {
+    border-left-color: #f59e0b; /* Cam */
+}
+.notify-item.type-warning .notify-icon {
+    background: rgba(245, 158, 11, 0.2);
+    color: #f59e0b;
+}
+
+.notify-item.type-system {
+    border-left-color: #3b82f6; /* Xanh */
+}
+.notify-item.type-system .notify-icon {
+    background: rgba(59, 130, 246, 0.2);
+    color: #3b82f6;
+}
+
+/* Icon */
+.notify-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    flex-shrink: 0;
+}
+
+/* Nội dung text */
+.notify-body {
+    flex: 1;
+}
+
+.notify-title {
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: #e5e7eb;
+    margin-bottom: 4px;
+}
+
+/* Dấu chấm đỏ chưa đọc */
+.notify-item.unread .notify-title::after {
+    content: '';
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    background: #ef4444;
+    border-radius: 50%;
+    margin-left: 6px;
+    vertical-align: middle;
+}
+
+.notify-desc {
+    font-size: 0.85rem;
+    color: #9ca3af;
+    line-height: 1.4;
+    margin-bottom: 8px;
+}
+
+.notify-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.75rem;
+    color: #6b7280;
+}
+
+.notify-meta i {
+    margin-right: 4px;
+}
+
+.notify-action {
+    color: #3b82f6;
+    text-decoration: none;
+    font-weight: 500;
+}
+.notify-action:hover {
+    text-decoration: underline;
+}
+
+/* Wrapper để tạo thanh cuộn cho nội dung dài */
+.info-scroll-content {
+    padding: 20px;
+    overflow-y: auto;
+    flex: 1;
+    color: #d1d5db; /* Màu chữ xám sáng dễ đọc trên nền tối */
+}
+
+/* Phần Logo & Tên dự án căn giữa */
+.info-brand {
+    text-align: center;
+    margin-bottom: 24px;
+}
+
+.info-logo-icon {
+    font-size: 3rem;
+    color: #3b82f6; /* Màu xanh chủ đạo */
+    margin-bottom: 8px;
+}
+
+.project-name {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #ffffff;
+    margin: 0;
+}
+
+.project-version {
+    font-size: 0.85rem;
+    color: #6b7280;
+    margin-top: 4px;
+}
+
+/* Các khối nội dung (Block) */
+.info-block {
+    margin-bottom: 24px;
+}
+
+.info-block h3 {
+    font-size: 1rem;
+    color: #ffffff;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border-left: 3px solid #3b82f6; /* Đường kẻ xanh điểm nhấn */
+    padding-left: 10px;
+}
+
+.info-block p {
+    font-size: 0.9rem;
+    line-height: 1.5;
+    color: #9ca3af;
+    margin: 0;
+}
+
+/* Danh sách tính năng */
+.info-feature-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.info-feature-list li {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    font-size: 0.9rem;
+    margin-bottom: 6px;
+    color: #d1d5db;
+}
+
+.info-feature-list li i {
+    color: #10b981; /* Màu xanh lá cho dấu tick */
+    margin-top: 2px;
+}
+
+/* Tags công nghệ */
+.tech-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.tag-tech {
+    background: rgba(255, 255, 255, 0.1);
+    color: #e5e7eb;
+    font-size: 0.75rem;
+    padding: 4px 10px;
+    border-radius: 4px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    font-family: monospace; /* Font kiểu code */
+}
+
+/* Đường kẻ ngang */
+.info-divider {
+    border: 0;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    margin: 20px 0;
+}
+
+/* Phần Team & GVHD */
+.team-block .team-role {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    color: #6b7280;
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+
+.team-block .mt-2 {
+    margin-top: 16px;
+}
+
+.team-member.highlight {
+    color: #fbbf24; /* Màu vàng nổi bật cho tên GVHD */
+    font-weight: 700;
+    font-size: 1rem;
+}
+
+.student-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.student-list li {
+    padding: 4px 0;
+    font-size: 0.9rem;
+    border-bottom: 1px dashed rgba(255, 255, 255, 0.1);
+}
+
+.student-list li:last-child {
+    border-bottom: none;
+}
+
+/* Footer nhỏ */
+.info-footer {
+    text-align: center;
+    font-size: 0.75rem;
+    color: #4b5563;
+    margin-top: 30px;
+}
