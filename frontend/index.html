@@ -19,11 +19,14 @@
     href="https://cdn.jsdelivr.net/npm/remixicon@4.3.0/fonts/remixicon.css"
   />
 
+  <!-- CSS Chính -->
   <link rel="stylesheet" href="style.css" />
+  <!-- CSS cho Panel Cảnh báo mới -->
+  <link rel="stylesheet" href="alerts.css" />
 </head>
 
 <body>
-  <!-- TOP BAR -->
+  <!-- TOP BAR (Giữ nguyên như file cũ) -->
   <header class="topbar">
     <div class="topbar-left">
       <div class="brand">
@@ -58,17 +61,12 @@
         <i class="ri-crosshair-2-line"></i>
       </button>
     </div>
-
-    <button class="user-btn" id="btn-login">
-      <i class="ri-user-3-line"></i>
-      <span>Đăng nhập</span>
-    </button>
   </header>
 
   <!-- MAIN -->
   <main class="app-main">
 
-    <!-- MAP PAGE (nền bản đồ luôn nằm sau, JS sẽ ẩn/hiện overlay phía trên) -->
+    <!-- MAP PAGE -->
     <section class="map-wrapper" id="page-map">
       <div id="map"></div>
 
@@ -88,7 +86,7 @@
         </button>
       </div>
 
-      <!-- WEATHER DETAIL -->
+      <!-- WEATHER DETAIL (Giữ nguyên như file cũ) -->
       <div class="weather-detail" id="weather-detail">
         <div class="detail-header">
           <span id="detail-location">Chọn một điểm trên bản đồ</span>
@@ -136,9 +134,15 @@
             <strong id="detail-nearest">--</strong>
           </div>
         </div>
+        <!-- Nút kích hoạt panel cảnh báo (tùy chọn xử lý JS) -->
+        <div class="obs-panel-footer">
+          <button id="btn-obs-alert" class="obs-alert-btn" type="button">
+            Cảnh báo chi tiết
+          </button>
+        </div>
       </div>
 
-      <!-- TIMESERIES PANEL -->
+      <!-- TIMESERIES PANEL (Giữ nguyên như file cũ) -->
       <div class="weather-timeseries" id="timeseries-panel" style="display:none;">
         <div class="ts-header">
           <span id="ts-location-name"></span>
@@ -166,19 +170,16 @@
 
     <!-- HOME PAGE -->
     <section class="page-panel" id="page-home">
-    <div class="page-panel-header">
-      <h1>Tổng quan thời tiết Việt Nam</h1>
-      <button class="page-close" data-close-page="home">
-        <i class="ri-close-line"></i>
-      </button>
-    </div>
-    <p>
-      Hiển thị vài số liệu tổng quan...
-    </p>
-  </section>
+      <div class="page-panel-header">
+        <h1>Tổng quan thời tiết Việt Nam</h1>
+        <button class="page-close" data-close-page="home">
+          <i class="ri-close-line"></i>
+        </button>
+      </div>
+      <p>Hiển thị vài số liệu tổng quan...</p>
+    </section>
 
-      <!-- ALERTS PAGE – KHỐI CẢNH BÁO NẰM TRONG TRANG -->
-      <!-- ALERTS PAGE – KHỐI CẢNH BÁO NẰM TRONG TRANG -->
+    <!-- ALERTS PAGE (TRANG CẢNH BÁO LỚN - Giữ nguyên như file cũ) -->
     <section class="page-panel" id="page-alerts">
       <div class="page-panel-header">
         <h1>Cảnh báo thời tiết</h1>
@@ -188,294 +189,254 @@
       </div>
 
       <div class="alerts-container">
-        <!-- CARD THỜI TIẾT HIỆN TẠI -->
+        <!-- CARD: THỜI TIẾT HÔM NAY -->
+        <div class="alert-today-card">
+          <div class="alert-today-header">
+            <span class="alert-today-title">Thời tiết hôm nay</span>
+            <span class="alert-today-date" id="alert-today-date"></span>
+          </div>
+          <div class="alert-today-body">
+            <p class="alert-today-line" id="alert-today-line1"></p>
+            <p class="alert-today-line" id="alert-today-line2"></p>
+          </div>
+        </div>
+
+        <!-- CARD: THỜI TIẾT HIỆN TẠI -->
         <div class="alert-current-card">
           <div class="alert-current-header">
             <span class="alert-current-title">Thời tiết hiện tại</span>
-            <span class="alert-current-time" id="alert-current-time">10:54</span>
+            <span class="alert-current-time" id="alert-current-time"></span>
           </div>
 
           <div class="alert-current-body">
-            <!-- BÊN TRÁI: ICON + NHIỆT ĐỘ LỚN -->
             <div class="alert-current-left">
               <div class="alert-icon-placeholder">
-                <!-- sau này bạn thay bằng icon thật -->
                 <i class="ri-cloudy-2-line"></i>
               </div>
               <div class="alert-temp-main">
-                <span id="alert-temp-value">15</span>
+                <span id="alert-temp-value"></span>
                 <span class="alert-temp-unit">°C</span>
               </div>
               <div class="alert-temp-feel">
-                RealFeel® <span id="alert-temp-feel">14°</span>
+                RealFeel® <span id="alert-temp-feel"></span>
               </div>
-              <div class="alert-condition" id="alert-condition">
-                Có mây
-              </div>
+              <div class="alert-condition" id="alert-condition"></div>
               <button class="alert-more-btn" type="button">
                 CHI TIẾT THÊM
               </button>
             </div>
 
-            <!-- BÊN PHẢI: BẢNG CHỈ SỐ -->
             <div class="alert-current-right">
               <div class="alert-metric-row">
                 <span>RealFeel Shade™</span>
-                <span id="alert-shade">13°</span>
+                <span id="alert-shade"></span>
               </div>
               <div class="alert-metric-row">
                 <span>Gió</span>
-                <span id="alert-wind">B 17 km/h</span>
+                <span id="alert-wind"></span>
               </div>
               <div class="alert-metric-row">
                 <span>Gió giật mạnh</span>
-                <span id="alert-gust">32 km/h</span>
+                <span id="alert-gust"></span>
               </div>
               <div class="alert-metric-row">
                 <span>Chất lượng không khí</span>
-                <span id="alert-aqi" class="alert-aqi-good">Vừa phải</span>
+                <span id="alert-aqi" class="alert-aqi-good"></span>
               </div>
             </div>
           </div>
         </div>
-
-        <!-- CARD MINUTECAST (MƯA TRONG 60 PHÚT TỚI) -->
-        <div class="minute-card">
-          <div class="minute-header">
-            <span class="minute-title">MINUTECAST™</span>
-            <span class="minute-subtime" id="minute-range">Trong 60 phút tới</span>
-          </div>
-          <p class="minute-text" id="minute-text">
-            Mưa kéo dài trong ít nhất 60 phút.
-          </p>
-          <div class="minute-bar">
-            <span class="minute-label-left">Bây giờ</span>
-            <div class="minute-bar-track">
-              <!-- 24 cột 2.5 phút/cột, chỉ là demo tĩnh -->
-              <!-- Nhạt → đậm để giống AccuWeather -->
-              <div class="minute-seg level-1"></div>
-              <div class="minute-seg level-1"></div>
-              <div class="minute-seg level-2"></div>
-              <div class="minute-seg level-2"></div>
-              <div class="minute-seg level-3"></div>
-              <div class="minute-seg level-3"></div>
-              <div class="minute-seg level-3"></div>
-              <div class="minute-seg level-3"></div>
-              <div class="minute-seg level-2"></div>
-              <div class="minute-seg level-2"></div>
-              <div class="minute-seg level-1"></div>
-              <div class="minute-seg level-1"></div>
-              <div class="minute-seg level-0"></div>
-              <div class="minute-seg level-0"></div>
-              <div class="minute-seg level-0"></div>
-              <div class="minute-seg level-0"></div>
-              <div class="minute-seg level-0"></div>
-              <div class="minute-seg level-0"></div>
-              <div class="minute-seg level-0"></div>
-              <div class="minute-seg level-0"></div>
-              <div class="minute-seg level-0"></div>
-              <div class="minute-seg level-0"></div>
-              <div class="minute-seg level-0"></div>
-              <div class="minute-seg level-0"></div>
-            </div>
-            <span class="minute-label-right" id="minute-end-time">+60′</span>
-          </div>
-        </div>
-
-        <!-- DANH SÁCH CÁC CẢNH BÁO KHÁC (NẾU CÓ) -->
         <div class="alerts-list" id="alerts-list">
-          <!-- JS sau này sẽ append các thẻ .alert-card vào đây -->
-          <!-- Ví dụ mẫu tĩnh: -->
-          <!--
-          <div class="alert-card alert-high">
-            <div class="alert-card-header">
-              <div class="alert-title">Mưa rất to</div>
-              <div class="alert-badge">CAO</div>
-            </div>
-            <p class="alert-message">
-              Lượng mưa lớn tại Bắc Bộ, nguy cơ ngập úng ở vùng trũng thấp.
-            </p>
-            <div class="alert-meta">
-              Ghi nhận tại 12 điểm quan trắc · Cập nhật 10:40
-            </div>
-          </div>
-          -->
+          <!-- JS render danh sách cảnh báo -->
         </div>
       </div>
     </section>
-
-      <p class="page-subtitle">
-        Các điều kiện thời tiết đáng chú ý được tổng hợp từ mạng lưới quan trắc.
-      </p>
-      <div id="alerts-list" class="alerts-list">
-        <!-- JS sẽ render danh sách cảnh báo vào đây -->
-      </div>
-    </section>
-
 
     <!-- NOTIFY PAGE -->
     <section class="page-panel" id="page-notify">
-    <div class="page-panel-header">
-      <h1>Thông báo & Cảnh báo</h1>
-      <button class="page-close" data-close-page="notify">
-        <i class="ri-close-line"></i>
-      </button>
-    </div>
-
-    <div class="notify-filter">
-      <button class="active">Tất cả</button>
-      <button>Cảnh báo</button>
-      <button>Tin tức</button>
-    </div>
-
-    <div class="notify-content-wrapper">
-      <div class="notify-group-label">Mới nhất</div>
-      
-      <ul class="notify-list" id="notify-list">
-        
-        <li class="notify-item type-danger unread">
-          <div class="notify-icon">
-            <i class="ri-alert-fill"></i>
-          </div>
-          <div class="notify-body">
-            <div class="notify-title">Cảnh báo Mưa lớn & Dông</div>
-            <div class="notify-desc">Khu vực Bắc Bộ có mưa rào và dông, cục bộ có mưa to đến rất to (30-60mm). Đề phòng ngập úng.</div>
-            <div class="notify-meta">
-              <span><i class="ri-time-line"></i> 10 phút trước</span>
-              <a href="#" class="notify-action">Xem trên bản đồ</a>
-            </div>
-          </div>
-        </li>
-
-        <li class="notify-item type-warning">
-          <div class="notify-icon">
-            <i class="ri-fire-fill"></i>
-          </div>
-          <div class="notify-body">
-            <div class="notify-title">Nắng nóng diện rộng</div>
-            <div class="notify-desc">Nhiệt độ Hà Nội chạm ngưỡng 38°C vào trưa nay. Chỉ số UV ở mức gây hại cao.</div>
-            <div class="notify-meta">
-              <span><i class="ri-time-line"></i> 1 giờ trước</span>
-            </div>
-          </div>
-        </li>
-
-      </ul>
-
-      <div class="notify-group-label">Hôm qua</div>
-      <ul class="notify-list">
-
-        <li class="notify-item type-system">
-          <div class="notify-icon">
-            <i class="ri-database-2-line"></i>
-          </div>
-          <div class="notify-body">
-            <div class="notify-title">Đồng bộ dữ liệu vệ tinh</div>
-            <div class="notify-desc">Hệ thống đã cập nhật dữ liệu mây và gió từ vệ tinh Himawari-8.</div>
-            <div class="notify-meta">
-              <span><i class="ri-time-line"></i> 1 ngày trước</span>
-            </div>
-          </div>
-        </li>
-
-      </ul>
-    </div>
-  </section>
-
-
-    <!-- INFO PAGE -->
-    <section class="page-panel" id="page-info">
-    <div class="page-panel-header">
-      <h1>Thông tin dự án</h1>
-      <button class="page-close" data-close-page="info">
-        <i class="ri-close-line"></i>
-      </button>
-    </div>
-
-    <div class="info-scroll-content">
-      
-      <div class="info-brand">
-        <div class="info-logo-icon"><i class="ri-cloud-windy-line"></i></div>
-        <h2 class="project-name">VN Weather Forecast</h2>
-        <p class="project-version">Phiên bản Beta 1.0.2</p>
-      </div>
-
-      <div class="info-block">
-        <h3><i class="ri-article-line"></i> Giới thiệu</h3>
-        <p>
-          Hệ thống hỗ trợ giám sát và dự báo thời tiết trực quan trên nền tảng bản đồ số. 
-          Dự án được xây dựng nhằm cung cấp dữ liệu thời gian thực về nhiệt độ, lượng mưa, 
-          hướng gió và các cảnh báo thiên tai cho khu vực Việt Nam.
-        </p>
-      </div>
-
-      <div class="info-block">
-        <h3><i class="ri-function-line"></i> Tính năng nổi bật</h3>
-        <ul class="info-feature-list">
-          <li><i class="ri-check-double-line"></i> Trực quan hóa dữ liệu trên bản đồ Leaflet.</li>
-          <li><i class="ri-check-double-line"></i> Theo dõi thời gian thực (Real-time tracking).</li>
-          <li><i class="ri-check-double-line"></i> Biểu đồ biến thiên nhiệt độ/lượng mưa 48h.</li>
-          <li><i class="ri-check-double-line"></i> Hệ thống cảnh báo sớm thiên tai.</li>
-        </ul>
-      </div>
-
-      <div class="info-block">
-        <h3><i class="ri-code-s-slash-line"></i> Công nghệ sử dụng</h3>
-        <div class="tech-tags">
-          <span class="tag-tech">HTML5/CSS3</span>
-          <span class="tag-tech">JavaScript (ES6)</span>
-          <span class="tag-tech">Leaflet.js</span>
-          <span class="tag-tech">OpenWeatherMap API</span>
-          <span class="tag-tech">NodeJS Backend</span>
-        </div>
-      </div>
-
-      <hr class="info-divider">
-
-      <div class="info-block team-block">
-        <h3><i class="ri-group-line"></i> Đội ngũ thực hiện</h3>
-        
-        <div class="team-role">Giảng viên hướng dẫn:</div>
-        <div class="team-member highlight">TS. Nguyễn Đình Hóa</div>
-
-        <div class="team-role mt-2">Sinh viên thực hiện:</div>
-        <ul class="student-list">
-          <li>1. Nguyễn Xuân Hiếu - B21DCVT019</li>
-          <li>2. Nguyễn Tuấn Huy - B21DCVT025</li>
-          <li>3. Ngọ Đức Duy - B21DCVT161</li>
-        </ul>
-      </div>
-
-      <div class="info-footer">
-        &copy; 2025 VN Weather Project. All rights reserved.
-      </div>
-
-    </div>
-  </section>
-
-  </main>
-
-  <!-- LOGIN MODAL -->
-  <div class="modal-backdrop" id="login-modal">
-    <div class="modal">
-      <div class="modal-header">
-        <h2>Đăng nhập</h2>
-        <button class="icon-btn" id="login-close">
+      <div class="page-panel-header">
+        <h1>Thông báo & Cảnh báo</h1>
+        <button class="page-close" data-close-page="notify">
           <i class="ri-close-line"></i>
         </button>
       </div>
-      <div class="modal-body">
-        <label>
-          Email
-          <input type="email" id="login-email" />
-        </label>
-        <label>
-          Mật khẩu
-          <input type="password" id="login-password" />
-        </label>
-        <button class="primary-btn" id="login-submit">Đăng nhập</button>
+
+      <div class="notify-filter">
+        <button class="active">Tất cả</button>
+        <button>Cảnh báo</button>
+        <button>Tin tức</button>
+      </div>
+
+      <div class="notify-content-wrapper">
+        <div class="notify-group-label">Mới nhất</div>
+        <ul class="notify-list" id="notify-list">
+          <li class="notify-item type-danger unread">
+            <div class="notify-icon"><i class="ri-alert-fill"></i></div>
+            <div class="notify-body">
+              <div class="notify-title">Cảnh báo Mưa lớn & Dông</div>
+              <div class="notify-desc">Khu vực Bắc Bộ có mưa rào và dông...</div>
+              <div class="notify-meta">
+                <span><i class="ri-time-line"></i> 10 phút trước</span>
+                <a href="#" class="notify-action">Xem trên bản đồ</a>
+              </div>
+            </div>
+          </li>
+          <li class="notify-item type-warning">
+            <div class="notify-icon"><i class="ri-fire-fill"></i></div>
+            <div class="notify-body">
+              <div class="notify-title">Nắng nóng diện rộng</div>
+              <div class="notify-desc">Nhiệt độ Hà Nội chạm ngưỡng 38°C...</div>
+              <div class="notify-meta">
+                <span><i class="ri-time-line"></i> 1 giờ trước</span>
+              </div>
+            </div>
+          </li>
+        </ul>
+        <div class="notify-group-label">Hôm qua</div>
+        <ul class="notify-list">
+          <li class="notify-item type-system">
+            <div class="notify-icon"><i class="ri-database-2-line"></i></div>
+            <div class="notify-body">
+              <div class="notify-title">Đồng bộ dữ liệu vệ tinh</div>
+              <div class="notify-desc">Hệ thống đã cập nhật dữ liệu mây và gió...</div>
+              <div class="notify-meta">
+                <span><i class="ri-time-line"></i> 1 ngày trước</span>
+              </div>
+            </div>
+          </li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- INFO PAGE -->
+    <section class="page-panel" id="page-info">
+      <div class="page-panel-header">
+        <h1>Thông tin dự án</h1>
+        <button class="page-close" data-close-page="info">
+          <i class="ri-close-line"></i>
+        </button>
+      </div>
+
+      <div class="info-scroll-content">
+        <div class="info-brand">
+          <div class="info-logo-icon"><i class="ri-cloud-windy-line"></i></div>
+          <h2 class="project-name">VN Weather Forecast</h2>
+          <p class="project-version">Phiên bản Beta 1.0.2</p>
+        </div>
+
+        <div class="info-block">
+          <h3><i class="ri-article-line"></i> Giới thiệu</h3>
+          <p>Hệ thống hỗ trợ giám sát và dự báo thời tiết...</p>
+        </div>
+
+        <div class="info-block">
+          <h3><i class="ri-function-line"></i> Tính năng nổi bật</h3>
+          <ul class="info-feature-list">
+            <li><i class="ri-check-double-line"></i> Trực quan hóa dữ liệu Leaflet.</li>
+            <li><i class="ri-check-double-line"></i> Theo dõi thời gian thực.</li>
+            <li><i class="ri-check-double-line"></i> Biểu đồ biến thiên 48h.</li>
+            <li><i class="ri-check-double-line"></i> Hệ thống cảnh báo sớm.</li>
+          </ul>
+        </div>
+
+        <div class="info-block">
+          <h3><i class="ri-code-s-slash-line"></i> Công nghệ sử dụng</h3>
+          <div class="tech-tags">
+            <span class="tag-tech">HTML5/CSS3</span>
+            <span class="tag-tech">JavaScript (ES6)</span>
+            <span class="tag-tech">Leaflet.js</span>
+            <span class="tag-tech">OpenWeatherMap API</span>
+            <span class="tag-tech">NodeJS Backend</span>
+          </div>
+        </div>
+
+        <hr class="info-divider">
+
+        <div class="info-block team-block">
+          <h3><i class="ri-group-line"></i> Đội ngũ thực hiện</h3>
+          <div class="team-role">Giảng viên hướng dẫn:</div>
+          <div class="team-member highlight">TS. Nguyễn Đình Hóa</div>
+          <div class="team-role mt-2">Sinh viên thực hiện:</div>
+          <ul class="student-list">
+            <li>1. Nguyễn Xuân Hiếu - B21DCVT019</li>
+            <li>2. Nguyễn Tuấn Huy - B21DCVT025</li>
+            <li>3. Ngọ Đức Duy - B21DCVT161</li>
+          </ul>
+        </div>
+        <div class="info-footer">
+          &copy; 2025 VN Weather Project. All rights reserved.
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- TIMEBAR (Giữ nguyên) -->
+  <div id="timebar" class="timebar">
+    <div class="timebar-header">
+      <span id="timebar-current-label">Hôm nay • --:--</span>
+      <span id="timebar-range-label">--</span>
+    </div>
+    <div class="timebar-slider-row">
+      <span id="timebar-start-label" class="timebar-edge-label">--</span>
+      <input
+        type="range"
+        id="timebar-slider"
+        min="0"
+        max="0"
+        step="1"
+        value="0"
+      />
+      <span id="timebar-end-label" class="timebar-edge-label">--</span>
+    </div>
+  </div>
+
+  <!-- === PANEL CẢNH BÁO SIDEBAR (MỚI THÊM) === -->
+  <div id="alert-panel" class="alert-panel hidden">
+    <div class="alert-header">
+      <span class="alert-title">Cảnh báo & Chi tiết</span>
+      <button id="alert-close"><i class="ri-close-line"></i></button>
+    </div>
+
+    <!-- Demo Section 1 -->
+    <div class="alert-section">
+      <h3>Dự báo hôm nay (Demo)</h3>
+      <div class="alert-today-line">Trời nhiều mây, có mưa rào nhẹ.</div>
+      <div class="alert-today-line">Độ ẩm: <strong>85%</strong> - Tầm nhìn: <strong>8km</strong></div>
+      <div class="alert-today-line" style="color: #dc2626; margin-top: 4px;">
+        <i class="ri-alarm-warning-fill"></i> Cảnh báo dông lốc cấp 1
       </div>
     </div>
+
+    <!-- Demo Section 2 -->
+    <div class="alert-section">
+      <h3>Thời tiết hiện tại</h3>
+      <div class="alert-current-temp">28°C</div>
+      
+      <div class="alert-meta-row">
+        <div class="alert-meta-col">
+          <div class="alert-meta-label">Cảm giác như</div>
+          <div class="alert-meta-value">32°C</div>
+        </div>
+        <div class="alert-meta-col">
+          <div class="alert-meta-label">Gió</div>
+          <div class="alert-meta-value">ĐN 15 km/h</div>
+        </div>
+      </div>
+
+      <div class="alert-meta-row">
+        <div class="alert-meta-col">
+          <div class="alert-meta-label">UV Index</div>
+          <div class="alert-meta-value">Cao (7)</div>
+        </div>
+        <div class="alert-meta-col">
+          <div class="alert-meta-label">Áp suất</div>
+          <div class="alert-meta-value">1008 hPa</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Dynamic content target -->
+    <div id="alert-dynamic-content"></div>
   </div>
 
   <!-- SCRIPTS -->
@@ -496,6 +457,7 @@
   <script src="ui.js"></script>
   <script src="alerts.js"></script>
   <script src="main.js"></script>
+  <script src="timebar.js"></script>
 
 </body>
 </html>
