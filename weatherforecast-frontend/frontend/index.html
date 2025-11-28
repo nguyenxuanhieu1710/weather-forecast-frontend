@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="vi" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Weather Forecast VN</title>
+
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet.heat/dist/leaflet-heat.js"></script>
+
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/remixicon@4.3.0/fonts/remixicon.css" />
+
+  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="alerts.css" />
+</head>
+
+<body>
+  <header class="topbar">
+    <div class="topbar-left">
+      <div class="brand">
+        <span class="brand-icon">☁</span>
+        <span class="brand-text">VN WEATHER</span>
+      </div>
+
+      <nav class="topbar-nav">
+        <button id="nav-home" class="nav-btn" type="button">
+          <i class="ri-home-4-line"></i>
+          <span>Home</span>
+        </button>
+        <button id="btn-alert" class="nav-btn">
+          <i class="ri-error-warning-line"></i>
+          <span>Cảnh báo</span>
+        </button>
+        <button id="nav-info" class="nav-btn" data-page="info">
+          <i class="ri-information-line"></i>
+          <span>Thông tin chung</span>
+        </button>
+      </nav>
+    </div>
+
+    <div class="topbar-right">
+      <div class="search-box">
+        <i class="ri-search-line"></i>
+        <input id="search-input" type="text" placeholder="Tìm địa điểm, tỉnh/thành..." />
+      </div>
+
+      <button
+        id="btn-gps-header"
+        class="gps-btn"
+        type="button"
+        title="Về vị trí hiện tại"
+      >
+        <i class="ri-focus-3-line"></i>
+      </button>
+    </div>
+  </header>
+
+  <main id="app-main" class="app-main">
+    
+    <section class="map-wrapper page page-active" id="page-map">
+      <div id="map"></div>
+
+      <div id="layer-chip" class="map-layer-chip">
+        Lớp: không bật
+      </div>
+
+      <div id="layer-legend" class="map-layer-legend hidden"></div>
+
+      <div id="info-stack">
+        <div id="nearest-panel" class="nearest-panel">
+          </div>
+
+        <div id="alert-panel" class="alert-panel hidden">
+          <div class="alert-header">
+            <div class="alert-title">Cảnh báo thời tiết</div>
+            <button id="alert-close">×</button>
+          </div>
+
+          <div id="alert-overview" class="alert-section">
+            <div class="alert-overview-header">
+              <span id="alert-overall-badge" class="alert-badge alert-level-none">
+                BÌNH THƯỜNG
+              </span>
+            </div>
+            <p id="alert-overall-comment">
+              Chưa có dữ liệu cảnh báo cho vị trí này. Hãy chọn một điểm trên bản đồ.
+            </p>
+          </div>
+
+          <div id="alert-today" class="alert-section">
+            </div>
+
+          <div id="alert-current" class="alert-section">
+            </div>
+
+          <div id="alert-hazards" class="alert-section">
+            <h3>Các nguy cơ chính</h3>
+            <div id="alert-hazards-list">
+              </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="map-floating right">
+        <button class="float-btn" id="btn-layer-temp" title="Bản đồ nhiệt độ hiện tại">
+          <i class="ri-temp-hot-line"></i>
+        </button>
+
+        <button class="float-btn" id="btn-layer-rain" title="Bản đồ lượng mưa hiện tại">
+          <i class="ri-rainy-line"></i>
+        </button>
+
+        <button class="float-btn" id="btn-radar-rain" title="Radar mưa (3h gần nhất)">
+          <i class="ri-radar-line"></i>
+        </button>
+
+        <button class="float-btn" id="btn-layer-wind" title="Trường gió hiện tại">
+          <i class="ri-windy-line"></i>
+        </button>
+
+        <button class="float-btn" id="btn-my-location">
+          <i class="ri-focus-3-line"></i>
+        </button>
+      </div>
+
+      <div id="forecast-bar">
+        <!-- Header: thời điểm đang chọn + nút điều khiển -->
+        <div class="fb-header">
+          <div class="fb-now">
+            <div id="fb-now-datetime">--</div>
+            <div id="fb-now-summary">
+              Chọn một điểm trên bản đồ để xem dự báo
+            </div>
+          </div>
+
+          <div class="fb-controls">
+            <button class="fb-btn" id="fb-prev">
+              <i class="ri-skip-back-mini-fill"></i>
+            </button>
+            <button class="fb-btn" id="fb-play">
+              <i class="ri-play-fill"></i>
+            </button>
+            <button class="fb-btn" id="fb-next">
+              <i class="ri-skip-forward-mini-fill"></i>
+            </button>
+            <button
+              class="fb-btn fb-toggle"
+              id="fb-toggle"
+              title="Ẩn/hiện thanh dự báo"
+            >
+              <i class="ri-arrow-down-s-line"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Body: header theo ngày + track giờ + legend -->
+        <div class="fb-body">
+          <!-- Hàng ngày (Windy-style), JS sẽ fill .fb-day-group-head -->
+          <div class="fb-row fb-row-days" id="fb-row-days"></div>
+
+          <!-- Track giờ + cursor -->
+          <div class="fb-track-wrap">
+            <div class="fb-track" id="fb-track"></div>
+            <div class="fb-cursor" id="fb-cursor"></div>
+          </div>
+
+          <!-- Legend -->
+          <div class="fb-legend">
+            <div class="fb-legend-item">
+              <span class="dot dot-temp"></span>Nhiệt độ (°C)
+            </div>
+            <div class="fb-legend-item">
+              <span class="dot dot-rain"></span>Mưa (mm)
+            </div>
+            <div class="fb-legend-item">
+              <span class="dot dot-wind"></span>Gió (m/s)
+            </div>
+          </div>
+        </div>
+      </div>
+
+
+      <div class="weather-detail" id="weather-detail">
+        <div class="detail-header">
+          <span id="detail-location">Chọn một điểm trên bản đồ</span>
+          <button id="detail-close"><i class="ri-close-line"></i></button>
+        </div>
+        <div class="detail-body">
+          <div class="detail-row">
+            <span>Thời gian:</span>
+            <strong id="detail-time">--</strong>
+          </div>
+          <div class="detail-row">
+            <span>Nhiệt độ:</span>
+            <strong id="detail-temp">--</strong>
+          </div>
+          <div class="detail-row">
+            <span>Lượng mưa:</span>
+            <strong id="detail-rain">--</strong>
+          </div>
+          <div class="detail-row">
+            <span>Gió:</span>
+            <strong id="detail-wind">--</strong>
+          </div>
+          <div class="detail-row">
+            <span>Tọa độ:</span>
+            <strong id="detail-coord">--</strong>
+          </div>
+        </div>
+      </div>
+    </section>
+
+<section class="page-panel" id="page-home">
+  <button id="home-close" class="panel-close-btn absolute-close">
+    <i class="ri-close-line"></i>
+  </button>
+
+  <div class="home-body">
+    <div class="home-header-row">
+      <div class="home-header-left">
+        <h1 class="home-title">Tổng quan thời tiết Việt Nam</h1>
+        <p class="home-description">
+          Dữ liệu quan trắc mới nhất từ mạng lưới trạm (Open-Meteo / backend nội bộ).
+          Hệ thống cập nhật liên tục theo thời gian thực.
+        </p>
+        <div class="home-meta-row">
+          <span id="home-obs-time">Quan trắc: --</span>
+          <span>|</span>
+          <span id="home-obs-count">Số điểm: 122</span>
+        </div>
+      </div>
+
+      <aside class="home-summary">
+        <div class="home-summary-title">TÓM TẮT NHANH</div>
+        <p id="home-summary-text">
+          Đang tải dữ liệu tóm tắt từ hệ thống...
+        </p>
+      </aside>
+    </div>
+
+<div class="home-grid">
+      
+      <article class="home-card home-card-wide">
+        <div class="home-card-header">
+          <div class="home-card-icon"><i class="ri-temp-hot-line"></i></div>
+          <div class="home-card-title">NHIỆT ĐỘ TRUNG BÌNH</div>
+        </div>
+        <div class="home-card-main" id="home-temp-avg">--.-°C</div>
+        
+        <div class="home-card-footer" id="home-temp-range">
+          Cao nhất: <span id="home-temp-max">--</span> <br> Thấp nhất: <span id="home-temp-min">--</span>
+          <span id="home-temp-max-loc" style="display:none"></span>
+          <span id="home-temp-min-loc" style="display:none"></span>
+        </div>
+      </article>
+
+      <article class="home-card">
+        <div class="home-card-header">
+          <div class="home-card-icon"><i class="ri-rainy-line"></i></div>
+          <div class="home-card-title">MƯA HIỆN TẠI</div>
+        </div>
+        <div class="home-card-main" id="home-rain-count">--</div>
+        
+        <div class="home-card-footer" id="home-rain-detail">
+          Điểm đang có mưa (mm > 0) <br> Mưa mạnh: <span id="home-rain-heavy-count">--</span>
+        </div>
+      </article>
+
+      <article class="home-card">
+        <div class="home-card-header">
+          <div class="home-card-icon"><i class="ri-sun-line"></i></div>
+          <div class="home-card-title">NẮNG NÓNG</div>
+        </div>
+        <div class="home-card-main" id="home-hot-35">--</div>
+        
+        <div class="home-card-footer" id="home-hot-detail">
+          Điểm ≥ 35°C <br> Rất nóng (≥ 37°C): <span id="home-hot-37">--</span>
+        </div>
+      </article>
+
+      <article class="home-card home-card-wide">
+        <div class="home-card-header">
+          <div class="home-card-icon"><i class="ri-windy-line"></i></div>
+          <div class="home-card-title">GIÓ MẠNH</div>
+        </div>
+        <div class="home-card-main" id="home-strong-wind">--</div>
+        
+        <div class="home-card-footer" id="home-wind-detail">
+          Số điểm có gió ≥ 10 m/s 
+          (≈ 36 km/h)
+        </div>
+      </article>
+    </div>
+  </div>
+</section>
+
+
+
+
+
+
+    <section class="page page-panel" id="page-info">
+      <div class="info-layout">
+        <header class="panel-header info-header">
+          <div>
+            <p class="info-kicker">Đồ án tốt nghiệp</p>
+            <h1 class="info-title">Hệ thống dự báo thời tiết cho Việt Nam</h1>
+            <p class="info-subtitle">
+              Ứng dụng bản đồ tương tác, mô hình dự báo và cơ sở dữ liệu thời gian–không gian
+              để giám sát và dự báo thời tiết theo giờ, theo ngày.
+            </p>
+          </div>
+          <button id="info-close" class="panel-close-btn" type="button">×</button>
+        </header>
+
+        <section class="info-grid">
+          <article class="info-card">
+            <h3><i class="ri-book-open-line"></i> Tên đề tài</h3>
+            <p class="info-text-strong">Xây dựng hệ thống dự báo thời tiết</p>
+            <p class="info-text">
+              Xây dựng web-map hiển thị thời tiết hiện tại, quá khứ và dự báo tương lai gần
+              trên lãnh thổ Việt Nam.
+            </p>
+          </article>
+
+          <article class="info-card">
+            <h3><i class="ri-user-star-line"></i> Giảng viên hướng dẫn</h3>
+            <p class="info-text-strong">TS. Nguyễn Đình Hóa</p>
+            <p class="info-text">
+              Định hướng kiến trúc hệ thống, phương pháp dự báo và đánh giá kết quả.
+            </p>
+          </article>
+
+          <article class="info-card">
+            <h3><i class="ri-team-line"></i> Thành viên nhóm</h3>
+            <ul class="info-list">
+              <li>Nguyễn Xuân Hiếu – B21DCVT019</li>
+              <li>Nguyễn Tuấn Huy – B21DCVT025</li>
+              <li>Ngọ Đức Duy – B21DCVT161</li>
+            </ul>
+          </article>
+        </section>
+
+        <section class="info-card info-wide">
+          <h3><i class="ri-layout-column-line"></i> Nội dung chính của đồ án</h3>
+
+          <div class="info-badges">
+            <span class="info-badge"><i class="ri-map-pin-2-line"></i> Leaflet map UI</span>
+            <span class="info-badge"><i class="ri-bar-chart-2-line"></i> Dự báo theo giờ / ngày</span>
+            <span class="info-badge"><i class="ri-database-2-line"></i> CSDL thời gian–không gian</span>
+            <span class="info-badge"><i class="ri-cpu-line"></i> Backend + ML</span>
+          </div>
+
+          <ul class="info-list">
+            <li>
+              <strong>Giao diện:</strong> hiển thị tốc độ gió, hướng gió, nhiệt độ, lượng mưa...
+              sử dụng Leaflet, HTML, CSS, tham khảo phong cách Windy.
+            </li>
+            <li>
+              <strong>Các chức năng bản đồ:</strong> bật/tắt lớp dữ liệu, xem giá trị tại từng điểm,
+              bản đồ nhiệt, bản đồ hướng/luồng gió, thanh thời gian forecast-bar.
+            </li>
+            <li>
+              <strong>Thời gian:</strong> hiển thị thời tiết hiện tại, quá khứ và dự báo
+              theo giờ, theo ngày trong tương lai gần.
+            </li>
+            <li>
+              <strong>Backend + ML:</strong> triển khai mô hình dự báo (nhiệt độ, gió, mưa, khả năng mưa)
+              để sinh dữ liệu dự báo cho giao diện.
+            </li>
+          </ul>
+        </section>
+
+        <section class="info-card info-wide">
+          <h3><i class="ri-database-line"></i> Dữ liệu và cơ sở dữ liệu</h3>
+          <p class="info-text">
+            Cơ sở dữ liệu được thiết kế để lưu trữ đầy đủ các loại dữ liệu thời tiết theo
+            cả không gian và thời gian, phục vụ trực tiếp cho việc hiển thị trên bản đồ.
+          </p>
+          <ul class="info-list">
+            <li>
+              <strong>Miền không gian:</strong> lưới điểm ảnh phủ toàn bộ lãnh thổ Việt Nam,
+              mỗi điểm lưu nhiệt độ, gió, mưa, áp suất, mây, v.v.
+            </li>
+            <li>
+              <strong>Miền thời gian:</strong> chuỗi thời điểm liên tục (theo giờ, theo ngày)
+              cho cả dữ liệu quan trắc và dữ liệu dự báo.
+            </li>
+            <li>
+              <strong>Tối ưu truy vấn:</strong> cấu trúc bảng hỗ trợ lấy nhanh 48–72h gần nhất
+              và dự báo cho từng vị trí để hiển thị lên map và các biểu đồ.
+            </li>
+          </ul>
+        </section>
+      </div>
+    </section>
+  </main>
+
+  <script src="config.js"></script>
+  <script src="data.js"></script>
+  <script src="dashboard.js"></script>
+  <script src="colors.js"></script>
+  <script src="legend.js"></script>
+
+  <script src="time_state.js"></script>
+  <script src="timebar.js"></script>
+
+  <script src="layers.js"></script></section>
+  <script src="layers_rain.js"></script>
+  <script src="layers_wind.js"></script>
+  <script src="wind_config.js"></script>
+  <script src="wind_field.js"></script>
+  <script src="wind_canvas_layer.js"></script>
+  <script src="wind_particle_layer.js"></script>
+  <script src="wind_controls.js"></script>
+
+  <script src="map.js"></script>
+  <script src="ui.js"></script>
+  <script src="alerts.js"></script>
+  <script src="main.js"></script>
+</body>
+</html>

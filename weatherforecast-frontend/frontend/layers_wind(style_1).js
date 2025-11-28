@@ -1,5 +1,5 @@
 // layers_wind.js
-// Hiển thị gió kiểu Windy: nền màu tốc độ + hạt chuyển động theo hướng gió
+// Hiển thị gió: nền màu tốc độ + hạt chuyển động (particle advection) – kiểu Windy / earth.nullschool
 // Yêu cầu:
 //  - window.map (Leaflet) đã khởi tạo
 //  - Backend trả cells có: lat, lon, wind_ms, wind_dir_deg
@@ -19,17 +19,22 @@ const WIND_IDW_POWER = 2.0;
 const WIND_FIELD_DLAT = 0.1;
 const WIND_FIELD_DLON = 0.1;
 
-// Hạt gió
-const WIND_PARTICLE_COUNT = 2000;        // số lượng hạt
-const WIND_PARTICLE_MAX_AGE = 220;       // số frame sống
-const WIND_PARTICLE_SPEED_SCALE = 0.05;  // scale tốc độ -> px mỗi frame
+// Hạt gió (particle advection)
+const WIND_PARTICLE_COUNT = 1200;           // số hạt tối đa
+const WIND_PARTICLE_MIN_SPEED = 0.3;        // m/s – dưới ngưỡng coi như tắt, respawn
+const WIND_PARTICLE_MAX_AGE = 600;          // số bước tối đa của 1 hạt
+const WIND_PARTICLE_BASE_STEP_DEG = 0.01;   // bước lat/lon tối thiểu mỗi frame (độ)
+const WIND_PARTICLE_STEP_DEG_RANGE = 0.05;  // phần tăng thêm theo tốc độ
+const WIND_PARTICLE_FADE_ALPHA = 0.08;      // độ mờ mỗi frame (0–1), càng cao càng ngắn vệt
 
 // ===================== Biến toàn cục =====================
 
-let windCanvasLayer = null;    // nền màu gió
-let windParticleLayer = null;  // hạt chuyển động
-let currentWindField = null;   // trường gió hiện tại
+let windCanvasLayer = null;      // nền màu gió
+let windParticleLayer = null;    // hạt gió động
+let currentWindField = null;     // trường gió hiện tại
+
 window.currentWindField = null;
+window.windParticleLayer = null;
 
 // ===================== Helper chung =====================
 
@@ -96,7 +101,7 @@ function extractWindSrcPoints(cells) {
 }
 
 /**
- * Xây trường gió đều trên bbox VN bằng IDW + nội suy bilinear:
+ * Xây trường gió đều trên bbox dữ liệu bằng IDW + nội suy bilinear:
  * Trả về:
  * {
  *   minLat,maxLat,minLon,maxLon,
@@ -208,7 +213,7 @@ function buildWindFieldFromCells(cells) {
     }
   }
 
-  // Range tốc độ cho màu
+  // Range tốc độ cho màu / scale
   let minS = Infinity;
   let maxS = -Infinity;
   for (let iy = 0; iy < nLat; iy++) {
@@ -277,7 +282,7 @@ function buildWindFieldFromCells(cells) {
   };
 }
 
-// ===================== Màu tốc độ gió =====================
+// ===================== Màu tốc độ gió (nền màu) =====================
 
 function windSpeedToRGBA(field, speed) {
   if (!field) return [0, 0, 0, 0];
@@ -330,7 +335,7 @@ function windSpeedToRGBA(field, speed) {
   ];
 }
 
-// ===================== Lớp nền màu gió (canvas) =====================
+// ===================== Lớp nền màu gió (canvas tĩnh, vẽ lại khi pan/zoom) =====================
 
 const WindCanvasLayer = L.Layer.extend({
   initialize: function () {
@@ -432,6 +437,11 @@ const WindCanvasLayer = L.Layer.extend({
       currentWindField = field;
       window.currentWindField = field;
 
+      // thông báo cho layer hạt gió nếu đang bật
+      if (window.windParticleLayer && typeof window.windParticleLayer.onFieldUpdated === "function") {
+        window.windParticleLayer.onFieldUpdated();
+      }
+
       this._scheduleRedraw();
     } catch (err) {
       console.error("WindCanvasLayer fetch error", err);
@@ -439,6 +449,11 @@ const WindCanvasLayer = L.Layer.extend({
       this._field = null;
       currentWindField = null;
       window.currentWindField = null;
+
+      if (window.windParticleLayer && typeof window.windParticleLayer.onFieldUpdated === "function") {
+        window.windParticleLayer.onFieldUpdated();
+      }
+
       this._scheduleRedraw();
     }
   },
@@ -496,35 +511,36 @@ const WindCanvasLayer = L.Layer.extend({
   },
 });
 
-// ===================== Lớp hạt gió (particle) =====================
+// ===================== Lớp hạt gió (particle advection) =====================
 
 const WindParticleLayer = L.Layer.extend({
+  initialize: function () {
+    this._map = null;
+    this._canvas = null;
+    this._ctx = null;
+    this._particles = [];
+    this._animFrameId = null;
+    this._lastTime = null;
+  },
+
   onAdd: function (map) {
     this._map = map;
-    this._canvas = L.DomUtil.create("canvas", "meteo-wind-particles");
-    const size = map.getSize();
-    this._canvas.width = size.x;
-    this._canvas.height = size.y;
-    this._canvas.style.position = "absolute";
-    this._canvas.style.top = "0";
-    this._canvas.style.left = "0";
-    this._canvas.style.pointerEvents = "none";
+    this._initCanvas();
 
     const pane = map.getPane("meteo") || map.getPanes().overlayPane;
     pane.appendChild(this._canvas);
 
-    this._ctx = this._canvas.getContext("2d");
-    this._particles = [];
-    this._frame = null;
+    this._reset();
 
-    this._resetParticles();
-    this._bindEvents();
-    this._loop();
+    map.on("moveend zoomend resize", this._reset, this);
+
+    this._startAnimation();
   },
 
   onRemove: function (map) {
-    this._unbindEvents();
-    if (this._frame) cancelAnimationFrame(this._frame);
+    map.off("moveend zoomend resize", this._reset, this);
+    this._stopAnimation();
+
     if (this._canvas && this._canvas.parentNode) {
       this._canvas.parentNode.removeChild(this._canvas);
     }
@@ -534,179 +550,258 @@ const WindParticleLayer = L.Layer.extend({
     this._particles = [];
   },
 
-  _bindEvents: function () {
-    this._onResize    = this._handleResize.bind(this);
-    this._onMoveStart = this._handleMoveStart.bind(this);
-    this._onMoveEnd   = this._handleMoveEnd.bind(this);
-
-    this._map.on("resize",    this._onResize);
-    this._map.on("movestart", this._onMoveStart); // bắt đầu kéo map
-    this._map.on("moveend",   this._onMoveEnd);   // thả map
-  },
-
-  _unbindEvents: function () {
-    if (!this._map) return;
-    this._map.off("resize",    this._onResize);
-    this._map.off("movestart", this._onMoveStart);
-    this._map.off("moveend",   this._onMoveEnd);
-  },
-
-  _handleResize: function () {
+  _initCanvas: function () {
+    if (this._canvas) return;
+    const canvas = (this._canvas = L.DomUtil.create(
+      "canvas",
+      "meteo-wind-particles"
+    ));
     const size = this._map.getSize();
-    this._canvas.width = size.x;
-    this._canvas.height = size.y;
-    this._resetParticles();
+    canvas.width = size.x;
+    canvas.height = size.y;
+    canvas.style.position = "absolute";
+    canvas.style.top = "0";
+    canvas.style.left = "0";
+    canvas.style.pointerEvents = "none";
+
+    this._ctx = canvas.getContext("2d");
   },
 
-  _handleMoveStart: function () {
-    // bắt đầu kéo map: xóa toàn bộ vệt cũ để không bị lệch
-    if (!this._ctx || !this._canvas) return;
-    this._ctx.clearRect(0, 0, this._canvas.width, this._canvas.height);
-  },
-
-  _handleMoveEnd: function () {
-    // thả map: sinh lại hạt theo viewport mới
-    this._resetParticles();
-  },
-
-  _resetParticles: function () {
+  _reset: function () {
     if (!this._map || !this._canvas) return;
+
     const size = this._map.getSize();
-    this._particles = [];
-    for (let i = 0; i < WIND_PARTICLE_COUNT; i++) {
-      this._particles.push(this._randomParticle(size));
+    const canvas = this._canvas;
+
+    canvas.width = size.x;
+    canvas.height = size.y;
+
+    const topLeft = this._map.containerPointToLayerPoint([0, 0]);
+    L.DomUtil.setPosition(canvas, topLeft);
+
+    // Không reset lat/lon của hạt để tránh nhảy, chỉ clear canvas
+    if (this._ctx) {
+      this._ctx.clearRect(0, 0, canvas.width, canvas.height);
     }
   },
 
-  _randomParticle: function (size) {
-    let x = Math.random() * size.x;
-    let y = Math.random() * size.y;
+  _startAnimation: function () {
+    if (this._animFrameId != null) return;
 
-    // Nếu có mask VN thì chỉ spawn hạt bên trong VN
-    if (this._map) {
-      let ok = false;
-      for (let i = 0; i < 30; i++) {
-        x = Math.random() * size.x;
-        y = Math.random() * size.y;
-        const ll = this._map.containerPointToLatLng([x, y]);
-        if (ll && isLatLngInsideVN(ll.lat, ll.lng)) {
-          ok = true;
-          break;
-        }
-      }
-      // nếu thử 30 lần vẫn trượt thì chấp nhận vị trí random cuối
-      if (!ok) {
-        x = Math.random() * size.x;
-        y = Math.random() * size.y;
-      }
-    }
-
-    return {
-      x,
-      y,
-      age: Math.floor(Math.random() * WIND_PARTICLE_MAX_AGE),
-      justRespawned: true,
+    const loop = (timestamp) => {
+      this._animFrameId = requestAnimationFrame(loop);
+      this._tick(timestamp);
     };
+
+    this._animFrameId = requestAnimationFrame(loop);
   },
 
-  _respawnParticle: function (p, size) {
-    const np = this._randomParticle(size);
-    p.x = np.x;
-    p.y = np.y;
-    p.age = np.age;
-    p.justRespawned = true;
+  _stopAnimation: function () {
+    if (this._animFrameId != null) {
+      cancelAnimationFrame(this._animFrameId);
+      this._animFrameId = null;
+    }
   },
 
-  _evolveParticle: function (p, size) {
-    const field = window.currentWindField;
-    if (!field || !this._map) {
-      p.age = WIND_PARTICLE_MAX_AGE + 1;
-      p.justRespawned = false;
-      return;
-    }
-
-    if (p.age > WIND_PARTICLE_MAX_AGE) {
-      this._respawnParticle(p, size);
-      return;
-    }
-
-    const latlng = this._map.containerPointToLatLng([p.x, p.y]);
-    if (!latlng) {
-      this._respawnParticle(p, size);
-      return;
-    }
-
-    // Nếu đang ở ngoài VN thì respawn ngay
-    if (!isLatLngInsideVN(latlng.lat, latlng.lng)) {
-      this._respawnParticle(p, size);
-      return;
-    }
-
-    const wVec = field.sample(latlng.lat, latlng.lng);
-    if (!wVec || wVec.s <= 0.05) {
-      this._respawnParticle(p, size);
-      return;
-    }
-
-    // u,v (m/s) -> dịch chuyển pixel
-    const latRad = (latlng.lat * Math.PI) / 180;
-    const kx = 1 / Math.cos(latRad || 1e-6);
-
-    const dx = wVec.u * WIND_PARTICLE_SPEED_SCALE * kx;
-    const dy = -wVec.v * WIND_PARTICLE_SPEED_SCALE; // v dương Bắc → y giảm
-
-    const nx = p.x + dx;
-    const ny = p.y + dy;
-
-    // ra ngoài canvas thì respawn
-    if (nx < 0 || ny < 0 || nx >= size.x || ny >= size.y) {
-      this._respawnParticle(p, size);
-      return;
-    }
-
-    // kiểm tra vị trí mới có còn trong VN không
-    const ll2 = this._map.containerPointToLatLng([nx, ny]);
-    if (!ll2 || !isLatLngInsideVN(ll2.lat, ll2.lng)) {
-      this._respawnParticle(p, size);
-      return;
-    }
-
-    p.x = nx;
-    p.y = ny;
-    p.age += 1;
-    p.justRespawned = false;
-  },
-
-  _loop: function () {
+  _tick: function (timestamp) {
     if (!this._map || !this._ctx || !this._canvas) return;
 
+    const field = window.currentWindField;
     const ctx = this._ctx;
-    const size = this._map.getSize();
+    const canvas = this._canvas;
 
-    // Làm mờ frame cũ nhưng giữ trail tương đối dài
-    ctx.globalCompositeOperation = "destination-in";
-    ctx.fillStyle = "rgba(0,0,0,0.97)";
-    ctx.fillRect(0, 0, this._canvas.width, this._canvas.height);
-
-    // Vẽ vệt mới
-    ctx.globalCompositeOperation = "lighter";
-    ctx.lineWidth = 1.6;
-    ctx.strokeStyle = "rgba(255,255,255,0.95)";
-    for (const p of this._particles) {
-      const x0 = p.x;
-      const y0 = p.y;
-
-      this._evolveParticle(p, size);
-
-      if (p.justRespawned) continue;
-
-      ctx.beginPath();
-      ctx.moveTo(x0, y0);
-      ctx.lineTo(p.x, p.y);
-      ctx.stroke();
+    if (!field) {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      this._particles = [];
+      this._lastTime = timestamp;
+      return;
     }
 
-    this._frame = requestAnimationFrame(this._loop.bind(this));
+    // dt để có thể scale nếu cần (hiện tại dùng đơn giản)
+    if (this._lastTime == null) this._lastTime = timestamp;
+    const dt = (timestamp - this._lastTime) / 1000;
+    this._lastTime = timestamp;
+
+    // Tạo đủ số hạt
+    this._ensureParticles(field);
+
+    // Fade nhẹ để tạo vệt
+    ctx.globalCompositeOperation = "destination-out";
+    ctx.fillStyle = "rgba(0,0,0," + WIND_PARTICLE_FADE_ALPHA.toFixed(3) + ")";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.globalCompositeOperation = "lighter";
+
+    // Vẽ từng hạt
+    ctx.lineWidth = 1;
+    ctx.lineCap = "round";
+
+    const alive = [];
+    for (const p of this._particles) {
+      if (this._stepParticle(p, field, dt)) {
+        alive.push(p);
+      }
+    }
+    this._particles = alive;
+
+    ctx.globalCompositeOperation = "source-over";
+  },
+
+  _ensureParticles: function (field) {
+    const deficit = WIND_PARTICLE_COUNT - this._particles.length;
+    if (deficit <= 0) return;
+
+    for (let i = 0; i < deficit; i++) {
+      const p = this._spawnParticle(field);
+      if (p) this._particles.push(p);
+      else break;
+    }
+  },
+
+  _spawnParticle: function (field) {
+    const map = this._map;
+    if (!map || !field) return null;
+
+    const bounds = map.getBounds();
+
+    // Giao bbox field với bbox map
+    const minLat = Math.max(field.minLat, bounds.getSouth());
+    const maxLat = Math.min(field.maxLat, bounds.getNorth());
+    const minLon = Math.max(field.minLon, bounds.getWest());
+    const maxLon = Math.min(field.maxLon, bounds.getEast());
+
+    if (!(minLat < maxLat && minLon < maxLon)) return null;
+
+    // Thử một số lần để tìm chỗ có gió đủ mạnh
+    for (let k = 0; k < 30; k++) {
+      const lat = minLat + Math.random() * (maxLat - minLat);
+      const lon = minLon + Math.random() * (maxLon - minLon);
+
+      if (!isLatLngInsideVN(lat, lon)) continue;
+
+      const vec = field.sample(lat, lon);
+      if (!vec || !Number.isFinite(vec.s) || vec.s < WIND_PARTICLE_MIN_SPEED) {
+        continue;
+      }
+
+      return {
+        lat,
+        lon,
+        prevLat: lat,
+        prevLon: lon,
+        age: 0,
+      };
+    }
+
+    return null;
+  },
+
+  _stepParticle: function (p, field, dt) {
+    const lat = p.lat;
+    const lon = p.lon;
+
+    if (!isLatLngInsideVN(lat, lon)) {
+      return false;
+    }
+
+    const vec = field.sample(lat, lon);
+    if (!vec || !Number.isFinite(vec.s)) return false;
+
+    const speed = vec.s;
+    if (speed < WIND_PARTICLE_MIN_SPEED) {
+      p.age += 1;
+      if (p.age > 20) return false;
+      return true;
+    }
+
+    const uu = vec.u;
+    const vv = vec.v;
+    let mag = Math.sqrt(uu * uu + vv * vv);
+    if (!Number.isFinite(mag) || mag < 1e-6) return false;
+
+    const dirX = uu / mag; // hướng Đông
+    const dirY = vv / mag; // hướng Bắc
+
+    let sNorm = 0;
+    if (field.maxS > field.minS) {
+      sNorm = (speed - field.minS) / (field.maxS - field.minS);
+      if (sNorm < 0) sNorm = 0;
+      else if (sNorm > 1) sNorm = 1;
+    }
+
+    const stepDeg =
+      WIND_PARTICLE_BASE_STEP_DEG +
+      WIND_PARTICLE_STEP_DEG_RANGE * sNorm;
+
+    // dt có thể scale thêm nếu muốn nhanh/chậm theo thời gian thực
+    const scaledStep = stepDeg * (dt > 0 ? dt * 60 : 1);
+
+    const latRad = (lat * Math.PI) / 180;
+    let cosLat = Math.cos(latRad);
+    if (!Number.isFinite(cosLat) || Math.abs(cosLat) < 0.2) {
+      cosLat = cosLat >= 0 ? 0.2 : -0.2;
+    }
+
+    const newLat = lat + dirY * scaledStep;
+    const newLon = lon + (dirX * scaledStep) / cosLat;
+
+    if (
+      newLat < field.minLat ||
+      newLat > field.maxLat ||
+      newLon < field.minLon ||
+      newLon > field.maxLon
+    ) {
+      return false;
+    }
+
+    if (!isLatLngInsideVN(newLat, newLon)) {
+      return false;
+    }
+
+    // Vẽ đoạn từ prev -> new
+    const map = this._map;
+    const ctx = this._ctx;
+    const p0 = map.latLngToContainerPoint([p.prevLat, p.prevLon]);
+    const p1 = map.latLngToContainerPoint([newLat, newLon]);
+
+    const size = map.getSize();
+    if (
+      p1.x < -50 || p1.y < -50 ||
+      p1.x > size.x + 50 || p1.y > size.y + 50
+    ) {
+      return false;
+    }
+
+    // alpha theo tốc độ
+    let alpha = 0.1 + 0.9 * sNorm;
+    if (alpha > 1) alpha = 1;
+
+    ctx.strokeStyle = "rgba(255,255,255," + alpha.toFixed(3) + ")";
+    ctx.beginPath();
+    ctx.moveTo(p0.x, p0.y);
+    ctx.lineTo(p1.x, p1.y);
+    ctx.stroke();
+
+    // cập nhật particle
+    p.prevLat = newLat;
+    p.prevLon = newLon;
+    p.lat = newLat;
+    p.lon = newLon;
+    p.age = (p.age || 0) + 1;
+
+    if (p.age > WIND_PARTICLE_MAX_AGE) {
+      return false;
+    }
+
+    return true;
+  },
+
+  // Gọi khi field cập nhật mạnh (fetch mới)
+  onFieldUpdated: function () {
+    // reset toàn bộ hạt để sinh lại theo trường mới
+    this._particles = [];
+    if (this._ctx && this._canvas) {
+      this._ctx.clearRect(0, 0, this._canvas.width, this._canvas.height);
+    }
   },
 });
 
@@ -730,9 +825,11 @@ function showWindLayer() {
   if (windParticleLayer) {
     window.map.removeLayer(windParticleLayer);
     windParticleLayer = null;
+    window.windParticleLayer = null;
   }
   windParticleLayer = new WindParticleLayer();
   windParticleLayer.addTo(window.map);
+  window.windParticleLayer = windParticleLayer;
 }
 
 function hideWindLayer() {
@@ -745,7 +842,9 @@ function hideWindLayer() {
   if (windParticleLayer) {
     window.map.removeLayer(windParticleLayer);
     windParticleLayer = null;
+    window.windParticleLayer = null;
   }
+
   currentWindField = null;
   window.currentWindField = null;
 }
