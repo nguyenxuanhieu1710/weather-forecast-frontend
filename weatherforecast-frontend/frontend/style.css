@@ -177,108 +177,139 @@ body {
    CHIP + LEGEND LỚP DỮ LIỆU
    ========================================= */
 
+/* ================= CHECHIP (Nút hiển thị tên lớp) ================= */
 .map-layer-chip {
   position: absolute;
-  left: 16px;
-  bottom: 86px;             /* nằm trên timebar một chút */
+  left: 12px;                 /* Sát lề hơn một chút */
+  bottom: 80px;               /* Điều chỉnh vị trí */
   z-index: 810;
 
-  padding: 6px 10px;
+  padding: 5px 10px;          /* Nhỏ lại */
   border-radius: 999px;
-  background: rgba(15, 23, 42, 0.96);
+  background: rgba(15, 23, 42, 0.90); /* Tăng độ trong suốt */
   color: #e5e7eb;
-  font-size: 12px;
-  border: 1px solid rgba(148, 163, 184, 0.7);
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.8);
+  font-size: 11px;            /* Font nhỏ hơn */
+  font-weight: 500;
+  border: 1px solid rgba(255, 255, 255, 0.15); /* Viền mảnh, sáng hơn */
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(6px); /* Hiệu ứng kính mờ */
 
   display: flex;
   align-items: center;
   gap: 6px;
+  transition: all 0.3s ease;
 }
 
 .map-layer-chip::before {
   content: "●";
-  font-size: 10px;
-  color: #f97316;           /* accent cam */
+  font-size: 9px;
+  color: #f97316;
 }
 
-/* Hộp legend */
-
+/* ================= LEGEND (Bảng chú thích) ================= */
 .map-layer-legend {
   position: absolute;
-  left: 16px;
-  bottom: 136px;            /* cao hơn chip một chút */
+  left: 12px;
+  bottom: 125px;           /* Vị trí mới, gần chip hơn */
   z-index: 805;
 
-  min-width: 220px;
-  padding: 8px 10px;
-  border-radius: 12px;
-  background: rgba(15, 23, 42, 0.94);
-  color: #e5e7eb;
-  font-size: 11px;
-  border: 1px solid rgba(148, 163, 184, 0.7);
-  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.85);
+  min-width: 170px;        /* FIX: Nhỏ gọn hơn nhiều (cũ là 200-220px) */
+  padding: 8px 10px;       /* Padding nhỏ lại */
+  border-radius: 8px;
+  background: rgba(15, 23, 42, 0.85); /* Nền trong suốt hơn */
+  color: #f1f5f9;
+  font-size: 11px;         /* Font chữ mặc định nhỏ */
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(8px); /* Kính mờ mạnh hơn */
 }
 
 .map-layer-legend.hidden {
   display: none;
 }
 
+/* Tiêu đề legend */
 .map-layer-legend .legend-title {
-  font-weight: 600;
-  margin-bottom: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  margin-bottom: 6px;
+  color: #fff;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+  padding-bottom: 4px;
 }
 
+/* Từng dòng trong legend */
 .map-layer-legend .legend-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 6px;
-  margin-top: 4px;
+  margin-top: 4px; /* Khoảng cách giữa các dòng sát hơn */
+  line-height: 1.3;
 }
 
+/* Cụm bên trái: Ô màu + Giá trị số */
 .map-layer-legend .legend-label {
   display: flex;
   align-items: center;
   gap: 6px;
+  font-weight: 600;
+  font-size: 10px; /* Số đo nhỏ gọn */
+  color: #f1f5f9;
 }
 
-/* Gradient nhiệt độ */
-.legend-gradient {
-  height: 8px;
-  border-radius: 999px;
-  margin: 4px 0;
+/* Text mô tả bên phải (Lạnh, Mát...) */
+.map-layer-legend .legend-desc {
+  color: #94a3b8;
+  font-weight: 400;
+  font-size: 10px;
+  text-align: right;
 }
 
-.legend-temp {
-  background: linear-gradient(
-    to right,
-    #38bdf8,  /* lạnh */
-    #22c55e,  /* mát */
-    #facc15,  /* ấm */
-    #f97316   /* nóng */
-  );
+/* Ô vuông màu hiển thị (Swatch) - FIX: Nhỏ hơn và bo góc nhẹ */
+.legend-swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  flex-shrink: 0;
+  border: 1px solid rgba(255,255,255,0.2); /* Viền nhẹ cho ô màu nổi bật trên nền tối */
 }
 
-/* Marker màu nhỏ trong legend */
-.legend-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 999px;
-}
+/* =================================================================
+   BẢNG MÀU MỚI - ĐỒNG BỘ VỚI HÌNH ẢNH MAP THỰC TẾ
+   ================================================================= */
 
-.legend-dot-temp {
-  background: #f97316;
-}
+/* 1. Nhiệt độ (Temp) - Tông màu nhẹ nhàng, pastel hơn */
+.temp-cold { background-color: #67e8f9; } /* Cyan nhạt (khớp màu lạnh trên map) */
+.temp-cool { background-color: #4ade80; } /* Xanh lá mạ tươi */
+.temp-warm { background-color: #facc15; } /* Vàng chanh */
+.temp-hot  { background-color: #fb923c; } /* Cam nhạt (không dùng đỏ gắt nữa) */
 
-.legend-dot-rain {
-  background: #0ea5e9;
-}
+/* 2. Mưa (Rain) - Tông xanh dương từ rất nhạt đến đậm */
+.rain-light   { background-color: #cffafe; } /* Xanh lơ rất nhạt (mưa phùn) */
+.rain-mod     { background-color: #60a5fa; } /* Xanh trời */
+.rain-heavy   { background-color: #2563eb; } /* Xanh đậm */
+.rain-extreme { background-color: #4f46e5; } /* Tím xanh đậm */
 
-.legend-dot-wind {
-  background: #6366f1;
-}
+/* 3. Radar (dBZ) - Tương tự mưa nhưng có màu nóng cho cường độ cao */
+.radar-weak   { background-color: #a7f3d0; } /* Xanh bạc hà nhạt */
+.radar-mod    { background-color: #fde047; } /* Vàng nhạt */
+.radar-strong { background-color: #f87171; } /* Đỏ cam nhạt */
+.radar-severe { background-color: #dc2626; } /* Đỏ đậm */
 
+/* 4. Gió (Wind) - Chuyển từ Xanh ngọc (Teal) sang màu nóng */
+.wind-calm   { background-color: #ccfbf1; } /* Teal rất nhạt (gần như trắng trên map) */
+.wind-breezy { background-color: #2dd4bf; } /* Teal sáng (gió trung bình trên map) */
+.wind-strong { background-color: #f59e0b; } /* Chuyển sang Vàng cam */
+.wind-gale   { background-color: #ef4444; } /* Đỏ (Bão) */
+
+/* 5. Lũ lụt (Flood Risk) - Giữ nguyên hoặc điều chỉnh nhẹ */
+.flood-none  { background-color: #cbd5e1; } /* Xám sáng */
+.flood-low   { background-color: #86efac; } /* Xanh nhạt */
+.flood-med   { background-color: #fde047; } /* Vàng */
+.flood-high  { background-color: #fb923c; } /* Cam */
+.flood-vhigh { background-color: #ef4444; } /* Đỏ */
 
 /* =========================================
    MAIN LAYOUT
@@ -1338,6 +1369,76 @@ body {
     grid-column: span 1;
   }
 }
+
+
+/* =========================================
+   FLOATING ACTION BUTTON - LŨ LỤT
+   ========================================= */
+
+.fab-flood {
+  position: absolute;
+  /* canh góc trên phải map: điều chỉnh theo layout hiện tại */
+  top: 330px;          /* dưới ô search một chút */
+  left: 10px;
+
+  z-index: 850;        /* cao hơn map, thấp hơn panel lớn nếu cần */
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  padding: 10px 14px;
+  border-radius: 999px;
+
+  border: none;
+  cursor: pointer;
+
+  background: linear-gradient(135deg, #f97316, #ea580c);
+  color: #f9fafb;
+  font-size: 13px;
+  font-weight: 600;
+
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.5);
+  transition: transform 0.12s ease-out, box-shadow 0.12s ease-out,
+    background 0.12s ease-out, opacity 0.12s ease-out;
+}
+
+.fab-flood-icon {
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.16);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+}
+
+.fab-flood:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 14px 35px rgba(15, 23, 42, 0.6);
+}
+
+.fab-flood:active {
+  transform: translateY(1px) scale(0.98);
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.7);
+}
+
+/* Trạng thái đang bật chế độ lũ lụt */
+.fab-flood.active {
+  background: linear-gradient(135deg, #facc15, #eab308);
+  color: #0f172a;
+}
+
+/* Ẩn chữ trên mobile, chỉ để icon cho gọn */
+@media (max-width: 768px) {
+  .fab-flood {
+    padding: 10px;
+  }
+  .fab-flood-label {
+    display: none;
+  }
+}
+
 
 
 

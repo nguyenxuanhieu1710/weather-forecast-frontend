@@ -5,12 +5,12 @@
 // LAYER STATE + NÚT BÊN TRÁI / GPS / ALERT PANEL
 // =============================================================
 
-// trạng thái lớp đang bật: "temp" | "rain" | "radar-rain" | "wind" | null
+// trạng thái lớp đang bật: "temp" | "rain" | "radar-rain" | "wind" | "flood" | null
 let currentLayerMode = null;
 
 // Cập nhật chip + legend lớp dữ liệu
 function updateLayerInfo(mode) {
-  // Gộp "radar-rain" về "radar" cho legend
+  // Gộp "radar-rain" về "radar"
   const logicalMode = mode === "radar-rain" ? "radar" : mode;
   currentLayerMode = logicalMode;
 
@@ -19,7 +19,7 @@ function updateLayerInfo(mode) {
   if (!chip || !legend) return;
 
   if (!logicalMode) {
-    chip.textContent = "Lớp: không bật";
+    chip.textContent = "Lớp: Tắt";
     legend.innerHTML = "";
     legend.classList.add("hidden");
     return;
@@ -27,79 +27,239 @@ function updateLayerInfo(mode) {
 
   legend.classList.remove("hidden");
 
-  if (logicalMode === "temp") {
-    chip.textContent = "Lớp: Nhiệt độ (°C)";
-    legend.innerHTML = `
-      <div class="legend-title">Nhiệt độ không khí</div>
-      <div class="legend-gradient legend-temp"></div>
-      <div class="legend-row">
-        <span>Lạnh</span>
-        <span>Mát</span>
-        <span>Ấm</span>
-        <span>Nóng</span>
+  // Helper function tạo dòng legend
+  const createRow = (colorClass, range, desc) => `
+    <div class="legend-row">
+      <div class="legend-label">
+        <span class="legend-swatch ${colorClass}"></span>
+        <span>${range}</span>
       </div>
-    `;
-  } else if (logicalMode === "rain") {
-    chip.textContent = "Lớp: Lượng mưa (mm)";
-    legend.innerHTML = `
-      <div class="legend-title">Lượng mưa trong 1 giờ</div>
-      <div class="legend-row">
-        <div class="legend-label">
-          <span class="legend-dot legend-dot-rain"></span>
-          <span>0 – 1 mm</span>
+      <span class="legend-desc">${desc}</span>
+    </div>`;
+
+  switch (logicalMode) {
+    case "temp":
+      chip.textContent = "Lớp: Nhiệt độ (°C)";
+      legend.innerHTML = `
+        <div class="legend-title">Nhiệt độ không khí (°C)</div>
+
+        <!-- Thanh gradient đúng với tempValueToRGBA -->
+        <div class="legend-row" style="align-items:center; gap:8px;">
+
+          <span style="font-size:11px; color:#cbd5e1; white-space:nowrap;">Lạnh</span>
+
+          <div
+            style="
+              width:180px;
+              height:10px;
+              border-radius:999px;
+              border:1px solid rgba(148,163,184,0.6);
+              background: linear-gradient(
+                to right,
+                rgb(0, 32, 255) 0%,
+                rgb(0, 180, 255) 25%,
+                rgb(255, 255, 160) 50%,
+                rgb(255, 160, 0) 75%,
+                rgb(220, 0, 0) 100%
+              );
+            "
+          ></div>
+
+          <span style="font-size:11px; color:#cbd5e1; white-space:nowrap;">Nóng</span>
         </div>
-        <span>Mưa nhỏ</span>
-      </div>
-      <div class="legend-row">
-        <div class="legend-label">
-          <span class="legend-dot legend-dot-rain"></span>
-          <span>1 – 5 mm</span>
+
+        <div class="legend-row" style="margin-top:4px; font-size:11px; color:#cbd5e1; justify-content:space-between; width:180px; margin-left:auto; margin-right:auto;">
+          <span>10°C</span>
+          <span>20°C</span>
+          <span>30°C</span>
+          <span>40°C</span>
         </div>
-        <span>Mưa vừa</span>
-      </div>
-      <div class="legend-row">
-        <div class="legend-label">
-          <span class="legend-dot legend-dot-rain"></span>
-          <span>5 – 20 mm</span>
+      `;
+      break;
+
+
+
+    case "rain":
+      chip.textContent = "Lớp: Mưa (mm/1h)";
+      legend.innerHTML = `
+        <div class="legend-title">Lượng mưa (1 giờ, mm)</div>
+
+        <!-- Thanh gradient (giữ nguyên kích thước 180px) -->
+        <div class="legend-row" style="align-items:center; gap:8px;">
+
+          <span style="font-size:11px; color:#cbd5e1; white-space:nowrap;">
+            Không / rất nhỏ
+          </span>
+
+          <div
+            style="
+              width:180px;
+              height:10px;
+              border-radius:999px;
+              border:1px solid rgba(148,163,184,0.6);
+              background: linear-gradient(
+                to right,
+                rgb(173, 216, 230) 15%,  /* light blue ~ mưa yếu */
+                rgb(30, 144, 255) 40%,   /* dodger blue ~ mưa vừa */
+                rgb(123, 104, 238) 70%,  /* medium slate blue ~ mưa to */
+                rgb(186, 85, 211) 100%   /* medium orchid ~ mưa rất to */
+              );
+            "
+          ></div>
+
+          <span style="font-size:11px; color:#cbd5e1; white-space:nowrap;">
+            Mưa rất to
+          </span>
         </div>
-        <span>Mưa to</span>
-      </div>
-      <div class="legend-row">
-        <div class="legend-label">
-          <span class="legend-dot legend-dot-rain"></span>
-          <span>&gt; 20 mm</span>
+
+        <!-- Vạch mốc cường độ mưa tuyệt đối, khớp với đơn vị backend -->
+        <div
+          class="legend-row"
+          style="
+            margin-top:4px;
+            font-size:11px;
+            color:#cbd5e1;
+            justify-content:space-between;
+            width:180px;
+            margin-left:auto;
+            margin-right:auto;
+          "
+        >
+          <span>0 mm</span>
+          <span>0.5 mm</span>
+          <span>5 mm</span>
+          <span>≥20 mm</span>
         </div>
-        <span>Mưa rất to</span>
-      </div>
-    `;
-  } else if (logicalMode === "radar") {
-    chip.textContent = "Lớp: Radar mưa (3 giờ gần nhất)";
-    legend.innerHTML = `
-      <div class="legend-title">Radar mưa (3h gần nhất)</div>
-      <div class="legend-row">
-        <span>Khu vực sáng màu</span>
-        <span>→ mưa yếu</span>
-      </div>
-      <div class="legend-row">
-        <span>Khu vực đậm màu</span>
-        <span>→ mưa vừa / mưa to</span>
-      </div>
-    `;
-  } else if (logicalMode === "wind") {
-    chip.textContent = "Lớp: Gió (m/s)";
-    legend.innerHTML = `
-      <div class="legend-title">Hướng và tốc độ gió</div>
-      <div class="legend-row">
-        <div class="legend-label">
-          <span class="legend-dot legend-dot-wind"></span>
-          <span>Mũi tên chỉ hướng gió thổi tới</span>
+      `;
+      break;
+
+
+
+    case "radar":
+      chip.textContent = "Lớp: Radar mưa";
+      legend.innerHTML = `
+        <div class="legend-title">Radar mưa (3 giờ gần đây)</div>
+        <div style="font-size:9px; color:#94a3b8; margin-bottom:4px;">
+          Màu đậm hơn = vùng mưa mạnh hơn
         </div>
-      </div>
-      <div class="legend-row">
-        <span>Tốc độ càng lớn</span>
-        <span>→ mũi tên/hiệu ứng càng mạnh</span>
-      </div>
-    `;
+
+        <!-- Thanh gradient (giữ width 180px, dùng lại màu rainValueToRGBA) -->
+        <div class="legend-row" style="align-items:center; gap:8px;">
+
+          <span style="font-size:11px; color:#cbd5e1; white-space:nowrap;">
+            Không / rất nhỏ
+          </span>
+
+          <div
+            style="
+              width:180px;
+              height:10px;
+              border-radius:999px;
+              border:1px solid rgba(148,163,184,0.6);
+              background: linear-gradient(
+                to right,
+                rgb(173, 216, 230) 15%,  /* light blue – mưa yếu */
+                rgb(30, 144, 255) 40%,   /* dodger blue – mưa vừa */
+                rgb(123, 104, 238) 70%,  /* medium slate blue – mưa to */
+                rgb(186, 85, 211) 100%   /* medium orchid – mưa rất to */
+              );
+            "
+          ></div>
+
+          <span style="font-size:11px; color:#cbd5e1; white-space:nowrap;">
+            Mưa rất to
+          </span>
+        </div>
+
+        <!-- Mốc định tính, phù hợp với normalizeRain (không gán số mm/dBZ cứng) -->
+        <div
+          class="legend-row"
+          style="
+            margin-top:4px;
+            font-size:11px;
+            color:#cbd5e1;
+            justify-content:space-between;
+            width:180px;
+            margin-left:auto;
+            margin-right:auto;
+          "
+        >
+          <span>Không mưa</span>
+          <span>Mưa yếu</span>
+          <span>Mưa vừa</span>
+          <span>Mưa to / rất to</span>
+        </div>
+      `;
+      break;
+
+
+    case "wind":
+      chip.textContent = "Lớp: Gió (m/s)";
+      legend.innerHTML = `
+        <div class="legend-title">Tốc độ gió (m/s)</div>
+
+        <!-- Thanh gradient khớp logic windSpeedToRGBA, giữ width 180px -->
+        <div class="legend-row" style="align-items:center; gap:8px;">
+
+          <span style="font-size:11px; color:#cbd5e1; white-space:nowrap;">
+            Nhẹ
+          </span>
+
+          <div
+            style="
+              width:180px;
+              height:10px;
+              border-radius:999px;
+              border:1px solid rgba(148,163,184,0.6);
+              background: linear-gradient(
+                to right,
+                rgb(10, 20, 90) 0%,     /* dark blue – gió rất yếu */
+                rgb(20, 120, 120) 30%,  /* green-cyan – gió nhẹ/vừa */
+                rgb(180, 210, 60) 60%,  /* vàng – gió vừa/mạnh */
+                rgb(220, 120, 40) 80%,  /* cam – gió mạnh */
+                rgb(200, 40, 140) 100%  /* magenta – gió rất mạnh */
+              );
+            "
+          ></div>
+
+          <span style="font-size:11px; color:#cbd5e1; white-space:nowrap;">
+            Rất mạnh
+          </span>
+        </div>
+
+        <!-- Vạch mốc tốc độ gió (m/s), tuyệt đối, khớp đơn vị backend -->
+        <div
+          class="legend-row"
+          style="
+            margin-top:4px;
+            font-size:11px;
+            color:#cbd5e1;
+            justify-content:space-between;
+            width:180px;
+            margin-left:auto;
+            margin-right:auto;
+          "
+        >
+          <span>0 m/s</span>
+          <span>5 m/s</span>
+          <span>10 m/s</span>
+          <span>≥20 m/s</span>
+        </div>
+      `;
+      break;
+
+
+    case "flood":
+      chip.textContent = "Lớp: Nguy cơ lũ";
+      legend.innerHTML = `
+        <div class="legend-title">Chỉ số rủi ro lũ lụt</div>
+        ${createRow("flood-none", "< 1", "Thấp")}
+        ${createRow("flood-low", "1 – 3", "Chú ý")}
+        ${createRow("flood-med", "3 – 5", "Trung bình")}
+        ${createRow("flood-high", "5 – 7", "Cao")}
+        ${createRow("flood-vhigh", "≥ 7", "Rất cao")}
+      `;
+      break;
   }
 }
 
@@ -108,16 +268,45 @@ function setupLayerButtons() {
   const btnRain         = document.getElementById("btn-layer-rain");
   const btnRadarRain    = document.getElementById("btn-radar-rain");
   const btnWind         = document.getElementById("btn-layer-wind");
+  const btnFloodFab     = document.getElementById("fab-flood");         // FAB lũ lụt
   const btnLocate       = document.getElementById("btn-my-location");   // nút GPS nổi
   const btnLocateHeader = document.getElementById("btn-gps-header");    // nút GPS topbar
   const btnAlert        = document.getElementById("btn-alert");
 
-  // mode: "temp" | "rain" | "radar-rain" | "wind" | null
+  // mode: "temp" | "rain" | "radar-rain" | "wind" | "flood" | null
   function setActive(mode) {
     if (btnTemp)      btnTemp.classList.toggle("active", mode === "temp");
     if (btnRain)      btnRain.classList.toggle("active", mode === "rain");
     if (btnRadarRain) btnRadarRain.classList.toggle("active", mode === "radar-rain");
     if (btnWind)      btnWind.classList.toggle("active", mode === "wind");
+    if (btnFloodFab)  btnFloodFab.classList.toggle("active", mode === "flood");
+
+    // tắt/bật layer thực tế
+    if (mode !== "temp"  && window.hideTempLayer)  window.hideTempLayer();
+    if (mode !== "rain"  && window.hideRainLayer)  window.hideRainLayer();
+    if (mode !== "wind"  && window.hideWindLayer)  window.hideWindLayer();
+    if (mode !== "flood" && window.hideFloodLayer) window.hideFloodLayer?.();
+
+    // radar riêng
+    if (mode !== "radar-rain") {
+      if (typeof window.stopRainRadar === "function") {
+        window.stopRainRadar();
+      } else if (typeof window.hideRainRadar === "function") {
+        window.hideRainRadar();
+      }
+    }
+
+    if (mode === "temp"   && window.showTempLayer)   window.showTempLayer();
+    if (mode === "rain"   && window.showRainLayer)   window.showRainLayer();
+    if (mode === "wind"   && window.showWindLayer)   window.showWindLayer();
+    if (mode === "flood"  && window.showFloodLayer)  window.showFloodLayer();
+    if (mode === "radar-rain") {
+      if (typeof window.startRainRadar === "function") {
+        window.startRainRadar(3);
+      } else if (typeof window.showRainRadar === "function") {
+        window.showRainRadar();
+      }
+    }
 
     updateLayerInfo(mode);
   }
@@ -227,6 +416,22 @@ function setupLayerButtons() {
       }
     });
   }
+
+  // ===== FLOOD (FAB lũ lụt) =====
+  if (btnFloodFab) {
+    btnFloodFab.addEventListener("click", () => {
+      const isOn = currentLayerMode === "flood";
+
+      if (isOn) {
+        // tắt chế độ lũ
+        setActive(null);
+      } else {
+        // bật chế độ lũ: tắt các lớp khác, radar
+        setActive("flood");
+      }
+    });
+  }
+
 
   // ===== GPS: vị trí người dùng =====
   async function handleLocateClick(btn) {

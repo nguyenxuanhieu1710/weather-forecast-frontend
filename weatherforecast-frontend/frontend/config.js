@@ -1,8 +1,8 @@
 // ===================== Config & Globals =====================
 
 // Nếu API của bạn đã có prefix /api thì để nguyên:
-//const API_BASE = "http://100.123.92.116:8000/api"; //(DUY)
-const API_BASE = "http://100.113.91.24:8000/api"; // (HUY)
+const API_BASE = "http://100.123.92.116:8000/api"; //(DUY)
+//const API_BASE = "http://100.113.91.24:8000/api"; // (HUY)
 // Ví dụ localhost: "http://localhost:8000/api"
 
 

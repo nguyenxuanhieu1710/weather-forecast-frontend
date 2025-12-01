@@ -12,7 +12,8 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/remixicon@4.3.0/fonts/remixicon.css" />
 
   <link rel="stylesheet" href="style.css" />
-  <link rel="stylesheet" href="alerts.css" />
+  <link rel="stylesheet" href="info.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 
 <body>
@@ -29,8 +30,8 @@
           <span>Home</span>
         </button>
         <button id="btn-alert" class="nav-btn">
-          <i class="ri-error-warning-line"></i>
-          <span>Cảnh báo</span>
+          <i class="ri-file-list-3-line"></i>
+          <span>Thông tin chi tiết</span>
         </button>
         <button id="nav-info" class="nav-btn" data-page="info">
           <i class="ri-information-line"></i>
@@ -61,6 +62,14 @@
     <section class="map-wrapper page page-active" id="page-map">
       <div id="map"></div>
 
+      <!-- FAB Lũ lụt -->
+      <button id="fab-flood" class="fab-flood" title="Chế độ lũ lụt">
+        <div class="fab-flood-icon">
+          <i class="ri-water-flash-fill"></i>
+        </div>
+        <span class="fab-flood-label">Lũ lụt</span>
+      </button>
+
       <div id="layer-chip" class="map-layer-chip">
         Lớp: không bật
       </div>
@@ -73,7 +82,7 @@
 
         <div id="alert-panel" class="alert-panel hidden">
           <div class="alert-header">
-            <div class="alert-title">Cảnh báo thời tiết</div>
+            <div class="alert-title">Thông tin chi tiết</div>
             <button id="alert-close">×</button>
           </div>
 
@@ -84,7 +93,7 @@
               </span>
             </div>
             <p id="alert-overall-comment">
-              Chưa có dữ liệu cảnh báo cho vị trí này. Hãy chọn một điểm trên bản đồ.
+              Chưa có dữ liệu thông tin chi tiết cho vị trí này. Hãy chọn một điểm trên bản đồ.
             </p>
           </div>
 
@@ -181,34 +190,6 @@
       </div>
 
 
-      <div class="weather-detail" id="weather-detail">
-        <div class="detail-header">
-          <span id="detail-location">Chọn một điểm trên bản đồ</span>
-          <button id="detail-close"><i class="ri-close-line"></i></button>
-        </div>
-        <div class="detail-body">
-          <div class="detail-row">
-            <span>Thời gian:</span>
-            <strong id="detail-time">--</strong>
-          </div>
-          <div class="detail-row">
-            <span>Nhiệt độ:</span>
-            <strong id="detail-temp">--</strong>
-          </div>
-          <div class="detail-row">
-            <span>Lượng mưa:</span>
-            <strong id="detail-rain">--</strong>
-          </div>
-          <div class="detail-row">
-            <span>Gió:</span>
-            <strong id="detail-wind">--</strong>
-          </div>
-          <div class="detail-row">
-            <span>Tọa độ:</span>
-            <strong id="detail-coord">--</strong>
-          </div>
-        </div>
-      </div>
     </section>
 
 <section class="page-panel" id="page-home">
@@ -409,15 +390,17 @@
   <script src="layers.js"></script></section>
   <script src="layers_rain.js"></script>
   <script src="layers_wind.js"></script>
+  <script src="layers_flood.js"></script>
   <script src="wind_config.js"></script>
   <script src="wind_field.js"></script>
   <script src="wind_canvas_layer.js"></script>
   <script src="wind_particle_layer.js"></script>
   <script src="wind_controls.js"></script>
 
+  <script src="api.js"></script>
   <script src="map.js"></script>
   <script src="ui.js"></script>
-  <script src="alerts.js"></script>
+  <script src="info.js"></script>
   <script src="main.js"></script>
 </body>
 </html>
