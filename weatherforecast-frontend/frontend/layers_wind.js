@@ -1,5 +1,5 @@
 // layers_wind.js
-// Hiển thị gió: nền màu tốc độ + hạt chuyển động (particle advection) – kiểu Windy / earth.nullschool
+// Hiển thị gió: nền màu tốc độ + streamline động (pathline) – KHÔNG dùng mũi tên, KHÔNG dùng hạt rời
 // Yêu cầu:
 //  - window.map (Leaflet) đã khởi tạo
 //  - Backend trả cells có: lat, lon, wind_ms, wind_dir_deg
@@ -19,22 +19,22 @@ const WIND_IDW_POWER = 2.0;
 const WIND_FIELD_DLAT = 0.1;
 const WIND_FIELD_DLON = 0.1;
 
-// Hạt gió (particle advection)
-const WIND_PARTICLE_COUNT = 1200;           // số hạt tối đa
-const WIND_PARTICLE_MIN_SPEED = 0.3;        // m/s – dưới ngưỡng coi như tắt, respawn
-const WIND_PARTICLE_MAX_AGE = 600;          // số bước tối đa của 1 hạt
-const WIND_PARTICLE_BASE_STEP_DEG = 0.01;   // bước lat/lon tối thiểu mỗi frame (độ)
-const WIND_PARTICLE_STEP_DEG_RANGE = 0.05;  // phần tăng thêm theo tốc độ
-const WIND_PARTICLE_FADE_ALPHA = 0.08;      // độ mờ mỗi frame (0–1), càng cao càng ngắn vệt
+// Streamline động
+const WIND_STREAMLINE_COUNT = 400;         // số đường luồng tối đa
+const WIND_STREAMLINE_MAX_POINTS = 20;     // số điểm tối đa trên 1 streamline
+const WIND_STREAMLINE_MIN_SPEED = 0.3;     // m/s – dưới ngưỡng thì coi như chết, respawn
+const WIND_STREAMLINE_BASE_STEP_DEG = 0.02; // bước lat/lon tối thiểu mỗi frame (độ)
+const WIND_STREAMLINE_STEP_DEG_RANGE = 0.06; // thêm theo tốc độ để chỗ gió mạnh chạy nhanh hơn
+const WIND_STREAMLINE_MAX_AGE = 1000;      // số frame tối đa cho 1 streamline
 
 // ===================== Biến toàn cục =====================
 
-let windCanvasLayer = null;      // nền màu gió
-let windParticleLayer = null;    // hạt gió động
-let currentWindField = null;     // trường gió hiện tại
+let windCanvasLayer = null;        // nền màu gió
+let windStreamlineLayer = null;    // streamline động
+let currentWindField = null;       // trường gió hiện tại
 
 window.currentWindField = null;
-window.windParticleLayer = null;
+window.windStreamlineLayer = null;
 
 // ===================== Helper chung =====================
 
@@ -54,9 +54,11 @@ function isLatLngInsideVN(lat, lon) {
 
 // ===================== Helper toán học / dữ liệu =====================
 
+// ====== scale lon theo vĩ độ ======
 function dist2DegWind(lat1, lon1, lat2, lon2) {
   const dLat = lat1 - lat2;
-  const dLon = lon1 - lon2;
+  const meanLatRad = ((lat1 + lat2) * 0.5 * Math.PI) / 180;
+  const dLon = (lon1 - lon2) * Math.cos(meanLatRad);
   return dLat * dLat + dLon * dLon;
 }
 
@@ -101,7 +103,7 @@ function extractWindSrcPoints(cells) {
 }
 
 /**
- * Xây trường gió đều trên bbox dữ liệu bằng IDW + nội suy bilinear:
+ * Xây trường gió đều trên bbox dữ liệu bằng IDW trên u,v; s = hypot(u,v):
  * Trả về:
  * {
  *   minLat,maxLat,minLon,maxLon,
@@ -127,10 +129,9 @@ function buildWindFieldFromCells(cells) {
     if (p.lon < minLon) minLon = p.lon;
     if (p.lon > maxLon) maxLon = p.lon;
   }
-
   if (!Number.isFinite(minLat)) return null;
 
-  // Mở biên một chút cho nền phủ kín
+  // Mở biên
   minLat -= 0.5;
   maxLat += 0.5;
   minLon -= 0.5;
@@ -164,7 +165,7 @@ function buildWindFieldFromCells(cells) {
     return arr.slice(0, Math.min(K, arr.length));
   }
 
-  // IDW trên lưới
+  // IDW trên lưới: chỉ nội suy u,v; s suy ra từ hypot(u,v)
   for (let iy = 0; iy < nLat; iy++) {
     const lat = minLat + ((maxLat - minLat) * iy) / (nLat - 1);
     for (let ix = 0; ix < nLon; ix++) {
@@ -178,42 +179,44 @@ function buildWindFieldFromCells(cells) {
         continue;
       }
 
+      // trùng điểm
       if (neighbors[0].d2 < 1e-12) {
         const p0 = neighbors[0].p;
         u[iy][ix] = p0.u;
         v[iy][ix] = p0.v;
-        s[iy][ix] = p0.s;
+        s[iy][ix] = Math.hypot(p0.u, p0.v);
         continue;
       }
 
       let numU = 0;
       let numV = 0;
-      let numS = 0;
       let den = 0;
 
       for (const { p, d2 } of neighbors) {
         if (d2 <= 0) continue;
-        const w = 1 / Math.pow(d2, POWER / 2);
+        const w = 1 / Math.pow(d2, POWER / 2); // d2 là khoảng cách bình phương
         den += w;
         numU += p.u * w;
         numV += p.v * w;
-        numS += p.s * w;
       }
 
+      let uu, vv;
       if (den === 0) {
         const p0 = neighbors[0].p;
-        u[iy][ix] = p0.u;
-        v[iy][ix] = p0.v;
-        s[iy][ix] = p0.s;
+        uu = p0.u;
+        vv = p0.v;
       } else {
-        u[iy][ix] = numU / den;
-        v[iy][ix] = numV / den;
-        s[iy][ix] = numS / den;
+        uu = numU / den;
+        vv = numV / den;
       }
+
+      u[iy][ix] = uu;
+      v[iy][ix] = vv;
+      s[iy][ix] = Math.hypot(uu, vv);
     }
   }
 
-  // Range tốc độ cho màu / scale
+  // Range tốc độ cho màu
   let minS = Infinity;
   let maxS = -Infinity;
   for (let iy = 0; iy < nLat; iy++) {
@@ -229,6 +232,7 @@ function buildWindFieldFromCells(cells) {
     maxS = 1;
   }
 
+  // sample: bilinear u,v; s = hypot(u,v) (không nội suy s độc lập)
   function sample(lat, lon) {
     if (lat < minLat || lat > maxLat || lon < minLon || lon > maxLon) {
       return { u: 0, v: 0, s: 0 };
@@ -253,7 +257,6 @@ function buildWindFieldFromCells(cells) {
       const v10 = grid[y0][x1];
       const v01 = grid[y1][x0];
       const v11 = grid[y1][x1];
-
       const a = v00 * (1 - fx) + v10 * fx;
       const b = v01 * (1 - fx) + v11 * fx;
       return a * (1 - fy) + b * fy;
@@ -261,7 +264,7 @@ function buildWindFieldFromCells(cells) {
 
     const uu = bilinear(u);
     const vv = bilinear(v);
-    const ss = bilinear(s);
+    const ss = Math.hypot(uu, vv);
 
     return { u: uu, v: vv, s: ss };
   }
@@ -275,14 +278,14 @@ function buildWindFieldFromCells(cells) {
     nLon,
     u,
     v,
-    s,
+    s,       // giữ lại để debug/inspect; giá trị luôn khớp hypot(u,v)
     minS,
     maxS,
     sample,
   };
 }
 
-// ===================== Màu tốc độ gió (nền màu) =====================
+// ===================== Màu tốc độ gió =====================
 
 function windSpeedToRGBA(field, speed) {
   if (!field) return [0, 0, 0, 0];
@@ -335,7 +338,7 @@ function windSpeedToRGBA(field, speed) {
   ];
 }
 
-// ===================== Lớp nền màu gió (canvas tĩnh, vẽ lại khi pan/zoom) =====================
+// ===================== Lớp nền màu gió (canvas) =====================
 
 const WindCanvasLayer = L.Layer.extend({
   initialize: function () {
@@ -437,9 +440,9 @@ const WindCanvasLayer = L.Layer.extend({
       currentWindField = field;
       window.currentWindField = field;
 
-      // thông báo cho layer hạt gió nếu đang bật
-      if (window.windParticleLayer && typeof window.windParticleLayer.onFieldUpdated === "function") {
-        window.windParticleLayer.onFieldUpdated();
+      // thông báo cho layer streamline, nếu đang bật
+      if (window.windStreamlineLayer && typeof window.windStreamlineLayer.onFieldUpdated === "function") {
+        window.windStreamlineLayer.onFieldUpdated();
       }
 
       this._scheduleRedraw();
@@ -450,8 +453,8 @@ const WindCanvasLayer = L.Layer.extend({
       currentWindField = null;
       window.currentWindField = null;
 
-      if (window.windParticleLayer && typeof window.windParticleLayer.onFieldUpdated === "function") {
-        window.windParticleLayer.onFieldUpdated();
+      if (window.windStreamlineLayer && typeof window.windStreamlineLayer.onFieldUpdated === "function") {
+        window.windStreamlineLayer.onFieldUpdated();
       }
 
       this._scheduleRedraw();
@@ -511,16 +514,15 @@ const WindCanvasLayer = L.Layer.extend({
   },
 });
 
-// ===================== Lớp hạt gió (particle advection) =====================
+// ===================== Lớp streamline gió (canvas động) =====================
 
-const WindParticleLayer = L.Layer.extend({
+const WindStreamlineLayer = L.Layer.extend({
   initialize: function () {
     this._map = null;
     this._canvas = null;
     this._ctx = null;
-    this._particles = [];
+    this._streamlines = [];
     this._animFrameId = null;
-    this._lastTime = null;
   },
 
   onAdd: function (map) {
@@ -544,17 +546,18 @@ const WindParticleLayer = L.Layer.extend({
     if (this._canvas && this._canvas.parentNode) {
       this._canvas.parentNode.removeChild(this._canvas);
     }
+
     this._canvas = null;
     this._ctx = null;
     this._map = null;
-    this._particles = [];
+    this._streamlines = [];
   },
 
   _initCanvas: function () {
     if (this._canvas) return;
     const canvas = (this._canvas = L.DomUtil.create(
       "canvas",
-      "meteo-wind-particles"
+      "meteo-wind-streamlines"
     ));
     const size = this._map.getSize();
     canvas.width = size.x;
@@ -579,10 +582,8 @@ const WindParticleLayer = L.Layer.extend({
     const topLeft = this._map.containerPointToLayerPoint([0, 0]);
     L.DomUtil.setPosition(canvas, topLeft);
 
-    // Không reset lat/lon của hạt để tránh nhảy, chỉ clear canvas
-    if (this._ctx) {
-      this._ctx.clearRect(0, 0, canvas.width, canvas.height);
-    }
+    // Khi pan/zoom thì bỏ toàn bộ streamline cũ, seed lại theo viewport mới
+    this._streamlines = [];
   },
 
   _startAnimation: function () {
@@ -590,7 +591,7 @@ const WindParticleLayer = L.Layer.extend({
 
     const loop = (timestamp) => {
       this._animFrameId = requestAnimationFrame(loop);
-      this._tick(timestamp);
+      this._tick();
     };
 
     this._animFrameId = requestAnimationFrame(loop);
@@ -603,73 +604,54 @@ const WindParticleLayer = L.Layer.extend({
     }
   },
 
-  _tick: function (timestamp) {
+  _tick: function () {
     if (!this._map || !this._ctx || !this._canvas) return;
 
     const field = window.currentWindField;
     const ctx = this._ctx;
     const canvas = this._canvas;
 
+    // Không có trường gió → clear và đợi
     if (!field) {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      this._particles = [];
-      this._lastTime = timestamp;
       return;
     }
 
-    // dt để có thể scale nếu cần (hiện tại dùng đơn giản)
-    if (this._lastTime == null) this._lastTime = timestamp;
-    const dt = (timestamp - this._lastTime) / 1000;
-    this._lastTime = timestamp;
+    // Đảm bảo đủ số streamline
+    this._ensureStreamlines(field);
 
-    // Tạo đủ số hạt
-    this._ensureParticles(field);
+    // Cập nhật vị trí streamline
+    this._advanceStreamlines(field);
 
-    // Fade nhẹ để tạo vệt
-    ctx.globalCompositeOperation = "destination-out";
-    ctx.fillStyle = "rgba(0,0,0," + WIND_PARTICLE_FADE_ALPHA.toFixed(3) + ")";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.globalCompositeOperation = "lighter";
-
-    // Vẽ từng hạt
-    ctx.lineWidth = 1;
-    ctx.lineCap = "round";
-
-    const alive = [];
-    for (const p of this._particles) {
-      if (this._stepParticle(p, field, dt)) {
-        alive.push(p);
-      }
-    }
-    this._particles = alive;
-
-    ctx.globalCompositeOperation = "source-over";
+    // Vẽ lại
+    this._renderStreamlines(field);
   },
 
-  _ensureParticles: function (field) {
-    const deficit = WIND_PARTICLE_COUNT - this._particles.length;
-    if (deficit <= 0) return;
+  _ensureStreamlines: function (field) {
+    const needed = WIND_STREAMLINE_COUNT - this._streamlines.length;
+    if (needed <= 0) return;
 
-    for (let i = 0; i < deficit; i++) {
-      const p = this._spawnParticle(field);
-      if (p) this._particles.push(p);
+    for (let i = 0; i < needed; i++) {
+      const s = this._spawnStreamline(field);
+      if (s) this._streamlines.push(s);
       else break;
     }
   },
 
-  _spawnParticle: function (field) {
+  _spawnStreamline: function (field) {
     const map = this._map;
     if (!map || !field) return null;
 
     const bounds = map.getBounds();
-
     // Giao bbox field với bbox map
     const minLat = Math.max(field.minLat, bounds.getSouth());
     const maxLat = Math.min(field.maxLat, bounds.getNorth());
     const minLon = Math.max(field.minLon, bounds.getWest());
     const maxLon = Math.min(field.maxLon, bounds.getEast());
 
-    if (!(minLat < maxLat && minLon < maxLon)) return null;
+    if (!(minLat < maxLat && minLon < maxLon)) {
+      return null;
+    }
 
     // Thử một số lần để tìm chỗ có gió đủ mạnh
     for (let k = 0; k < 30; k++) {
@@ -679,25 +661,35 @@ const WindParticleLayer = L.Layer.extend({
       if (!isLatLngInsideVN(lat, lon)) continue;
 
       const vec = field.sample(lat, lon);
-      if (!vec || !Number.isFinite(vec.s) || vec.s < WIND_PARTICLE_MIN_SPEED) {
+      if (!vec || !Number.isFinite(vec.s) || vec.s < WIND_STREAMLINE_MIN_SPEED) {
         continue;
       }
 
       return {
         lat,
         lon,
-        prevLat: lat,
-        prevLon: lon,
+        points: [{ lat, lon }],
         age: 0,
+        idle: 0,
       };
     }
 
     return null;
   },
 
-  _stepParticle: function (p, field, dt) {
-    const lat = p.lat;
-    const lon = p.lon;
+  _advanceStreamlines: function (field) {
+    const alive = [];
+    for (const s of this._streamlines) {
+      if (this._stepStreamline(s, field)) {
+        alive.push(s);
+      }
+    }
+    this._streamlines = alive;
+  },
+
+  _stepStreamline: function (s, field) {
+    const lat = s.lat;
+    const lon = s.lon;
 
     if (!isLatLngInsideVN(lat, lon)) {
       return false;
@@ -707,10 +699,12 @@ const WindParticleLayer = L.Layer.extend({
     if (!vec || !Number.isFinite(vec.s)) return false;
 
     const speed = vec.s;
-    if (speed < WIND_PARTICLE_MIN_SPEED) {
-      p.age += 1;
-      if (p.age > 20) return false;
-      return true;
+    if (speed < WIND_STREAMLINE_MIN_SPEED) {
+      s.idle = (s.idle || 0) + 1;
+      if (s.idle > 20) return false;
+      // vẫn giữ lại vài frame để không nhảy quá gắt
+    } else {
+      s.idle = 0;
     }
 
     const uu = vec.u;
@@ -729,11 +723,8 @@ const WindParticleLayer = L.Layer.extend({
     }
 
     const stepDeg =
-      WIND_PARTICLE_BASE_STEP_DEG +
-      WIND_PARTICLE_STEP_DEG_RANGE * sNorm;
-
-    // dt có thể scale thêm nếu muốn nhanh/chậm theo thời gian thực
-    const scaledStep = stepDeg * (dt > 0 ? dt * 60 : 1);
+      WIND_STREAMLINE_BASE_STEP_DEG +
+      WIND_STREAMLINE_STEP_DEG_RANGE * sNorm;
 
     const latRad = (lat * Math.PI) / 180;
     let cosLat = Math.cos(latRad);
@@ -741,8 +732,8 @@ const WindParticleLayer = L.Layer.extend({
       cosLat = cosLat >= 0 ? 0.2 : -0.2;
     }
 
-    const newLat = lat + dirY * scaledStep;
-    const newLon = lon + (dirX * scaledStep) / cosLat;
+    const newLat = lat + dirY * stepDeg;
+    const newLon = lon + (dirX * stepDeg) / cosLat;
 
     if (
       newLat < field.minLat ||
@@ -757,51 +748,70 @@ const WindParticleLayer = L.Layer.extend({
       return false;
     }
 
-    // Vẽ đoạn từ prev -> new
-    const map = this._map;
-    const ctx = this._ctx;
-    const p0 = map.latLngToContainerPoint([p.prevLat, p.prevLon]);
-    const p1 = map.latLngToContainerPoint([newLat, newLon]);
+    s.lat = newLat;
+    s.lon = newLon;
+    s.age = (s.age || 0) + 1;
 
-    const size = map.getSize();
-    if (
-      p1.x < -50 || p1.y < -50 ||
-      p1.x > size.x + 50 || p1.y > size.y + 50
-    ) {
-      return false;
+    if (!Array.isArray(s.points)) s.points = [];
+    s.points.push({ lat: newLat, lon: newLon });
+    if (s.points.length > WIND_STREAMLINE_MAX_POINTS) {
+      s.points.shift();
     }
 
-    // alpha theo tốc độ
-    let alpha = 0.1 + 0.9 * sNorm;
-    if (alpha > 1) alpha = 1;
-
-    ctx.strokeStyle = "rgba(255,255,255," + alpha.toFixed(3) + ")";
-    ctx.beginPath();
-    ctx.moveTo(p0.x, p0.y);
-    ctx.lineTo(p1.x, p1.y);
-    ctx.stroke();
-
-    // cập nhật particle
-    p.prevLat = newLat;
-    p.prevLon = newLon;
-    p.lat = newLat;
-    p.lon = newLon;
-    p.age = (p.age || 0) + 1;
-
-    if (p.age > WIND_PARTICLE_MAX_AGE) {
+    if (s.age > WIND_STREAMLINE_MAX_AGE) {
       return false;
     }
 
     return true;
   },
 
-  // Gọi khi field cập nhật mạnh (fetch mới)
-  onFieldUpdated: function () {
-    // reset toàn bộ hạt để sinh lại theo trường mới
-    this._particles = [];
-    if (this._ctx && this._canvas) {
-      this._ctx.clearRect(0, 0, this._canvas.width, this._canvas.height);
+  _renderStreamlines: function () {
+    const ctx = this._ctx;
+    const canvas = this._canvas;
+    const map = this._map;
+
+    if (!ctx || !canvas || !map) return;
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    if (!this._streamlines.length) return;
+
+    ctx.lineWidth = 1;
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    ctx.globalCompositeOperation = "lighter";
+
+    for (const s of this._streamlines) {
+      const pts = s.points;
+      const n = pts.length;
+      if (n < 2) continue;
+
+      for (let i = 1; i < n; i++) {
+        const p0 = pts[i - 1];
+        const p1 = pts[i];
+
+        const c0 = map.latLngToContainerPoint([p0.lat, p0.lon]);
+        const c1 = map.latLngToContainerPoint([p1.lat, p1.lon]);
+
+        // alpha tăng dần từ đuôi -> đầu
+        const t = i / (n - 1);
+        const alpha = t; // đuôi mờ, đầu đậm
+
+        ctx.strokeStyle = "rgba(255,255,255," + alpha.toFixed(3) + ")";
+        ctx.beginPath();
+        ctx.moveTo(c0.x, c0.y);
+        ctx.lineTo(c1.x, c1.y);
+        ctx.stroke();
+      }
     }
+
+    ctx.globalCompositeOperation = "source-over";
+  },
+
+  // gọi khi field thay đổi mạnh (fetch mới)
+  onFieldUpdated: function () {
+    // reset streamline để seed lại theo trường gió mới
+    this._streamlines = [];
   },
 });
 
@@ -821,15 +831,15 @@ function showWindLayer() {
   windCanvasLayer = new WindCanvasLayer();
   windCanvasLayer.addTo(window.map);
 
-  // hạt gió
-  if (windParticleLayer) {
-    window.map.removeLayer(windParticleLayer);
-    windParticleLayer = null;
-    window.windParticleLayer = null;
+  // streamline
+  if (windStreamlineLayer) {
+    window.map.removeLayer(windStreamlineLayer);
+    windStreamlineLayer = null;
+    window.windStreamlineLayer = null;
   }
-  windParticleLayer = new WindParticleLayer();
-  windParticleLayer.addTo(window.map);
-  window.windParticleLayer = windParticleLayer;
+  windStreamlineLayer = new WindStreamlineLayer();
+  windStreamlineLayer.addTo(window.map);
+  window.windStreamlineLayer = windStreamlineLayer;
 }
 
 function hideWindLayer() {
@@ -839,10 +849,10 @@ function hideWindLayer() {
     window.map.removeLayer(windCanvasLayer);
     windCanvasLayer = null;
   }
-  if (windParticleLayer) {
-    window.map.removeLayer(windParticleLayer);
-    windParticleLayer = null;
-    window.windParticleLayer = null;
+  if (windStreamlineLayer) {
+    window.map.removeLayer(windStreamlineLayer);
+    windStreamlineLayer = null;
+    window.windStreamlineLayer = null;
   }
 
   currentWindField = null;

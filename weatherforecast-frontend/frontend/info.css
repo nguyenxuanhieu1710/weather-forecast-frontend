@@ -113,27 +113,40 @@
   background: #d1fae5; /* Xanh lá tươi */
   color: #065f46;
 }
+
+.alert-level-low {
+  background: #ecfdf3;  /* xanh lá rất nhạt */
+  color: #166534;       /* xanh lá đậm cho chữ/icon */
+}
+
+
 .alert-level-info {
   background: #dbeafe;
   color: #1e40af;
 }
+
+/* CẦN CHÚ Ý – VÀNG */
+.alert-level-medium,
 .alert-level-watch {
   background: #fef3c7;
   color: #92400e;
 }
+
 .alert-level-warning {
   background: #fee2e2;
   color: #991b1b;
 }
+
 .alert-level-danger {
   background: #7f1d1d;
   color: #fef2f2;
 }
 
-#alert-overall-comment {
-  font-size: 15px;
-  line-height: 1.5;
-  color: #374151;
+/* Alias cho hazards dùng level = "medium" */
+.alert-hazard-card.alert-level-medium,
+.alert-hazard-card.alert-level-watch {
+  background: #fffbeb;
+  border-left-color: #f59e0b;
 }
 
 /* --- TODAY --- */

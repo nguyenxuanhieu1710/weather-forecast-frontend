@@ -128,9 +128,7 @@
           <i class="ri-windy-line"></i>
         </button>
 
-        <button class="float-btn" id="btn-my-location">
-          <i class="ri-focus-3-line"></i>
-        </button>
+
       </div>
 
       <div id="forecast-bar">
@@ -161,6 +159,14 @@
               <i class="ri-arrow-down-s-line"></i>
             </button>
           </div>
+        </div>
+
+        <!-- Model Selector -->
+        <div id="model-switcher" class="model-switcher">
+          <button class="model-btn active" data-model="RidgeRegression">RidgeRegression</button>
+          <button class="model-btn" data-model="XGBoost">XGBoost</button>
+          <button class="model-btn" data-model="LightGBM">LightGBM</button>
+          <button class="model-btn" data-model="GRU">GRU</button>
         </div>
 
         <!-- Body: header theo ngày + track giờ + legend -->
@@ -384,9 +390,6 @@
   <script src="colors.js"></script>
   <script src="legend.js"></script>
 
-  <script src="time_state.js"></script>
-  <script src="timebar.js"></script>
-
   <script src="layers.js"></script></section>
   <script src="layers_rain.js"></script>
   <script src="layers_wind.js"></script>
@@ -400,6 +403,10 @@
   <script src="api.js"></script>
   <script src="map.js"></script>
   <script src="ui.js"></script>
+
+  <script src="time_state.js"></script>
+  <script src="timebar.js"></script>
+
   <script src="info.js"></script>
   <script src="main.js"></script>
 </body>

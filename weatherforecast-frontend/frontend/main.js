@@ -434,7 +434,7 @@ function setupLayerButtons() {
 
 
   // ===== GPS: vị trí người dùng =====
-  async function handleLocateClick(btn) {
+  function handleLocateClick(btn) {
     if (!navigator.geolocation) {
       console.warn("Trình duyệt không hỗ trợ Geolocation");
       return;
@@ -443,7 +443,7 @@ function setupLayerButtons() {
     if (btn) btn.disabled = true;
 
     navigator.geolocation.getCurrentPosition(
-      async (pos) => {
+      (pos) => {
         if (btn) btn.disabled = false;
 
         const lat = pos.coords.latitude;
@@ -451,72 +451,15 @@ function setupLayerButtons() {
 
         // 1) Đưa map về đúng vị trí user
         if (window.map && window.map.setView) {
-          window.map.setView([lat, lon], 8);
+          window.map.setView([lat, lon], 13);
         }
 
-        // 2) Vẽ marker vị trí user
-        try {
-          if (window.map && window.L) {
-            if (window._gpsMarker) {
-              window.map.removeLayer(window._gpsMarker);
-            }
-            window._gpsMarker = L.circleMarker([lat, lon], {
-              radius: 6,
-              color: "#f97316",
-              weight: 2,
-              fillColor: "#f97316",
-              fillOpacity: 0.9,
-            }).addTo(window.map);
-          }
-        } catch (e) {
-          console.error("GPS marker error", e);
-        }
-
-        // 3) Gọi nearest
-        let nearest = null;
-        let cell = null;
-        let locationId = null;
-
-        try {
-          if (typeof window.fetchNearestTemp === "function") {
-            nearest = await window.fetchNearestTemp(lat, lon);
-          }
-        } catch (err) {
-          console.error("[GPS] fetchNearestTemp failed", err);
-        }
-
-        if (nearest && nearest.found && nearest.location_id) {
-          locationId = String(nearest.location_id);
-          if (typeof window.findCellByLocationId === "function") {
-            cell = window.findCellByLocationId(locationId);
-          }
-        }
-
-        window.lastNearestResult = nearest || null;
-        window.lastLocationId = locationId || null;
-        window.lastCell = cell || null;
-
-        // 4) Đổ lên card chi tiết
-        if (typeof window.updateWeatherDetail === "function") {
-          window.updateWeatherDetail(lat, lon, nearest, cell);
-        }
-
-        // 5) timeseries cho TimeBar
-        if (locationId && typeof window.loadTimeSeriesForLocation === "function") {
-          try {
-            await window.loadTimeSeriesForLocation(locationId);
-          } catch (err) {
-            console.error("[GPS] loadTimeSeriesForLocation failed", err);
-          }
-        }
-
-        // 6) Chuẩn bị dữ liệu cho panel Cảnh báo, KHÔNG mở panel
-        if (locationId && typeof window.setAlertLocation === "function") {
-          try {
-            await window.setAlertLocation(locationId);
-          } catch (err) {
-            console.error("[GPS] setAlertLocation failed", err);
-          }
+        // 2) KHÔNG vẽ circleMarker riêng cho GPS nữa
+        //    Thay vào đó, giả lập click lên map tại vị trí này
+        if (window.map && window.L) {
+          const latlng = L.latLng(lat, lon);
+          // Giả lập sự kiện click giống như user bấm vào bản đồ
+          window.map.fire("click", { latlng });
         }
       },
       (err) => {
@@ -530,6 +473,7 @@ function setupLayerButtons() {
       }
     );
   }
+
 
   if (btnLocate) {
     btnLocate.addEventListener("click", () => handleLocateClick(btnLocate));

@@ -1,4 +1,4 @@
-const API_BASE = "http://100.113.91.24:8000/api";
+const API_BASE = window.API_BASE;
 
 // Lấy điểm gần nhất theo click
 window.fetchObsNearest = async function (lat, lon) {

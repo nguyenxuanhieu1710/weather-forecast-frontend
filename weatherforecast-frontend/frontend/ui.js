@@ -448,14 +448,25 @@ function initSearch() {
 
   function flyTo(lat, lon, label) {
     if (!window.map) return;
+
     const z = map.getZoom ? map.getZoom() : 5;
     const targetZoom = Math.max(z, 11);
+
+    // 1) Di chuyển map tới vị trí tìm kiếm
     map.flyTo([lat, lon], targetZoom);
-    L.marker([lat, lon])
-      .addTo(map)
-      .bindPopup(`<b>${label || "Địa điểm"}</b>`)
-      .openPopup();
+
+    // 2) KHÔNG vẽ marker riêng cho search nữa
+    //    Thay vào đó, giả lập click trên map để dùng lại toàn bộ logic click map:
+    //    - popup "Vị trí đang chọn"
+    //    - fetchNearestTemp
+    //    - updateWeatherDetail (panel chi tiết bên phải)
+    //    - loadTimeSeriesForLocation, alert, v.v.
+    if (window.L && typeof map.fire === "function") {
+      const latlng = L.latLng(lat, lon);
+      map.fire("click", { latlng });
+    }
   }
+
 
   input.addEventListener("input", (e) => acFetch(e.target.value));
 
