@@ -30,9 +30,10 @@ Dữ liệu được hiển thị thông qua các biểu đồ tương tác và 
 | <img src="https://github.com/user-attachments/assets/ba73f462-3960-4840-8496-5f9174ed69d9" width="100%" alt="ManHomeWeb" /> | <img src="https://github.com/user-attachments/assets/6e764b09-2f05-469f-88cc-d84dbd71e5d8" width="100%" alt="BieuDoWeb" /> |
 | **Giao diện chính với các chỉ số** | **Phân tích dữ liệu lịch sử/dự báo** |
 
-| 🗺️ Bản đồ Nhiệt & Gió (Leaflet) | 🌡️ HeatMap Nhiệt độ (Chuyên sâu) |
+| 🗺️ Bản đồ Gió | 🌡️ HeatMap Nhiệt độ |
 |:---:|:---:|
-| <img src="https://github.com/user-attachments/assets/1df2b982-0700-4783-98d3-fa027ccfd8d7" width="100%" alt="ManHinhChinhWeb" /> | <img src="https://github.com/user-attachments/assets/aae90201-c78f-41d1-b8ee-84405ef8c207" width="100%" alt="NhietDoWeb" /> |
+| <img width="1600" height="810" alt="BanDoGioWeb" src="https://github.com/user-attachments/assets/82a65fff-69f0-48c2-b667-3078d02d8c34" />
+ /> | <img src="https://github.com/user-attachments/assets/aae90201-c78f-41d1-b8ee-84405ef8c207" width="100%" alt="NhietDoWeb" /> |
 
 ## ✨ Tính năng chính (Key Features)
 
