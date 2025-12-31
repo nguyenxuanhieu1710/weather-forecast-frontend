@@ -733,33 +733,4 @@ function renderAlertsPageFromObsList(obsList) {
 window.renderAlertsPageFromObsList = renderAlertsPageFromObsList;
 
 
-// ui.js
 
-window.updateDetailFromTimebar = function (obs) {
-  if (!obs) return;
-
-  const elTime = document.getElementById("detail-time");
-  const elTemp = document.getElementById("detail-temp");
-  const elRain = document.getElementById("detail-rain");
-  const elWind = document.getElementById("detail-wind");
-  const elWindDir = document.getElementById("detail-wind-dir");
-  const elRh = document.getElementById("detail-rh");
-  const elCloud = document.getElementById("detail-cloud");
-  const elPressure = document.getElementById("detail-pressure");
-
-  function fmt(n, suffix) {
-    if (n === null || n === undefined || Number.isNaN(n)) return "--";
-    return `${n}${suffix || ""}`;
-  }
-
-  if (elTime) {
-    elTime.textContent = new Date(obs.valid_at).toLocaleString("vi-VN");
-  }
-  if (elTemp) elTemp.textContent = fmt(obs.temp_c, " °C");
-  if (elRain) elRain.textContent = fmt(obs.precip_mm, " mm");
-  if (elWind) elWind.textContent = fmt(obs.wind_ms, " m/s");
-  if (elWindDir) elWindDir.textContent = fmt(obs.wind_dir_deg, "°");
-  if (elRh) elRh.textContent = fmt(obs.rel_humidity_pct, " %");
-  if (elCloud) elCloud.textContent = fmt(obs.cloudcover_pct, " %");
-  if (elPressure) elPressure.textContent = fmt(obs.surface_pressure_hpa, " hPa");
-};

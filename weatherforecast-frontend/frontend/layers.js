@@ -372,3 +372,7 @@ window.hideTempLayer = function () {
     tempCanvasLayer = null;
   }
 };
+
+
+
+

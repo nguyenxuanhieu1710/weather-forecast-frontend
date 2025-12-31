@@ -9,11 +9,24 @@
   /** @type {Function[]} */
   const listeners = [];    // Các callback sẽ được gọi khi thời gian đổi
 
+  // thêm state
+  let locationId = null;
+
+  function setLocationId(id) {
+    locationId = id != null ? String(id) : null;
+  }
+
+  function getLocationId() {
+    return locationId;
+  }
+
+
   // ==========================
   // Khởi tạo danh sách thời gian
   // ==========================
   function initTimeSteps(list) {
     timeSteps = Array.isArray(list) ? list.slice() : [];
+    timeSteps.sort((a, b) => (Date.parse(a) || 0) - (Date.parse(b) || 0));
     if (!timeSteps.length) {
       currentIndex = 0;
       return;
@@ -185,6 +198,9 @@
     setCurrentIndex,
     onTimeChange,
 
+    // NEW
+    setLocationId,
+    getLocationId,
     // Điều hướng nâng cao cho forecast-bar kiểu Windy
     jumpWithinDay,
     jumpToDayStart,

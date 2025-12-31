@@ -41,12 +41,8 @@ const TEMP_MAX_C = 40;
  */
 
 let latestTempGridCache = null;
-window.latestTempGridCache = null;
+let inflightLatestTemp = null; // <<< thêm
 
-/**
- * GET /obs/latest (latest_snapshot)
- * backend trả: {"count": N, "data": [ ... ]}
- */
 async function fetchLatestTempGrid(force = false) {
   const now = Date.now();
 
@@ -55,78 +51,69 @@ async function fetchLatestTempGrid(force = false) {
     return latestTempGridCache;
   }
 
-  const url = `${API_BASE}/obs/latest?var=temp`;
-
-  const resp = await fetch(url, { cache: "no-store" });
-  if (!resp.ok) {
-    throw new Error(`Failed to fetch latest temp grid: HTTP ${resp.status}`);
+  // Nếu đang có request chạy, dùng chung
+  if (!force && inflightLatestTemp) {
+    return inflightLatestTemp;
   }
 
-  const data = await resp.json();
-  const rawCells = Array.isArray(data?.data)
-    ? data.data
-    : Array.isArray(data)
-    ? data
-    : [];
+  const url = `${API_BASE}/obs/latest?var=temp`;
 
-  /** @type {ObsCell[]} */
-  const cells = rawCells
-    .map((r) => {
-      if (!r) return null;
-
-      const lat = Number(r.lat);
-      const lon = Number(r.lon);
-      const temp_c =
-        r.temp_c != null ? Number(r.temp_c) : NaN;
-
-      if (!Number.isFinite(lat) || !Number.isFinite(lon) || !Number.isFinite(temp_c)) {
-        return null;
+  inflightLatestTemp = fetch(url, { cache: "no-store" })
+    .then(async (resp) => {
+      if (!resp.ok) {
+        throw new Error(`Failed to fetch latest temp grid: HTTP ${resp.status}`);
       }
+      const data = await resp.json();
 
-      const location_id = r.location_id || r.id || null;
-      const valid_at = r.valid_at || null;
+      const rawCells = Array.isArray(data?.data)
+        ? data.data
+        : Array.isArray(data)
+        ? data
+        : [];
 
-      const precip_mm =
-        r.precip_mm != null ? Number(r.precip_mm) : 0;
-      const wind_ms =
-        r.wind_ms != null ? Number(r.wind_ms) : null;
-      const wind_dir_deg =
-        r.wind_dir_deg != null ? Number(r.wind_dir_deg) : null;
-      const rel_humidity_pct =
-        r.rel_humidity_pct != null ? Number(r.rel_humidity_pct) : null;
-      const cloudcover_pct =
-        r.cloudcover_pct != null ? Number(r.cloudcover_pct) : null;
-      const surface_pressure_hpa =
-        r.surface_pressure_hpa != null ? Number(r.surface_pressure_hpa) : null;
+      const cells = rawCells
+        .map((r) => {
+          if (!r) return null;
+          const lat = Number(r.lat);
+          const lon = Number(r.lon);
+          const temp_c = r.temp_c != null ? Number(r.temp_c) : NaN;
+          if (!Number.isFinite(lat) || !Number.isFinite(lon) || !Number.isFinite(temp_c)) {
+            return null;
+          }
+          return {
+            location_id: r.location_id || r.id || null,
+            lat,
+            lon,
+            temp_c,
+            valid_at: r.valid_at || null,
+            precip_mm: r.precip_mm != null ? Number(r.precip_mm) : 0,
+            wind_ms: r.wind_ms != null ? Number(r.wind_ms) : null,
+            wind_dir_deg: r.wind_dir_deg != null ? Number(r.wind_dir_deg) : null,
+            rel_humidity_pct: r.rel_humidity_pct != null ? Number(r.rel_humidity_pct) : null,
+            cloudcover_pct: r.cloudcover_pct != null ? Number(r.cloudcover_pct) : null,
+            surface_pressure_hpa: r.surface_pressure_hpa != null ? Number(r.surface_pressure_hpa) : null,
+          };
+        })
+        .filter(Boolean);
 
-      return {
-        location_id: location_id != null ? String(location_id) : null,
-        lat,
-        lon,
-        temp_c,
-        valid_at,
-        precip_mm,
-        wind_ms,
-        wind_dir_deg,
-        rel_humidity_pct,
-        cloudcover_pct,
-        surface_pressure_hpa,
+      const obsTime = data.obs_time || (cells.length ? cells[0].valid_at : null);
+
+      latestTempGridCache = {
+        cells,
+        fetchedAt: now,
+        validUntil: now + TEMP_TTL_MS,
+        obsTime: obsTime || null,
       };
+      window.latestTempGridCache = latestTempGridCache;
+      return latestTempGridCache;
     })
-    .filter(Boolean);
+    .finally(() => {
+      inflightLatestTemp = null; // <<< giải phóng
+    });
 
-  const obsTime = data.obs_time || (cells.length ? cells[0].valid_at : null);
-
-  latestTempGridCache = {
-    cells,
-    fetchedAt: now,
-    validUntil: now + TEMP_TTL_MS,
-    obsTime: obsTime || null,
-  };
-
-  window.latestTempGridCache = latestTempGridCache;
-  return latestTempGridCache;
+  return inflightLatestTemp;
 }
+
 
 function invalidateLatestTempGrid() {
   latestTempGridCache = null;
@@ -145,25 +132,44 @@ async function fetchNearestTemp(lat, lon) {
   const resp = await fetch(url.toString(), { cache: "no-store" });
 
   if (resp.status === 404) {
-    return { has_data: false, found: false };
+    return { has_data: false, found: false, location_id: null, lat: null, lon: null, raw: null, location: null };
   }
-
   if (!resp.ok) {
     throw new Error(`Failed to fetch nearest: HTTP ${resp.status}`);
   }
 
   const data = await resp.json();
-  const found = !!(data && (data.found ?? true));
+
+  // ---- Robust parse (top-level hoặc nested location.*) ----
+  const locId = data?.location_id || data?.location?.id || data?.id || null;
+
+  const sLatRaw = (data?.lat ?? data?.location?.lat);
+  const sLonRaw = (data?.lon ?? data?.location?.lon);
+
+  const sLat = Number.isFinite(Number(sLatRaw)) ? Number(sLatRaw) : null;
+  const sLon = Number.isFinite(Number(sLonRaw)) ? Number(sLonRaw) : null;
+
+  // found ưu tiên boolean từ backend; fallback: có locId thì coi là found
+  const found =
+    typeof data?.found === "boolean"
+      ? data.found
+      : !!locId;
 
   return {
     raw: data,
     has_data: found,
     found,
-    location_id: data.location_id || data.id || null,
-    lat: data.lat,
-    lon: data.lon,
+    location_id: locId ? String(locId) : null,
+    lat: sLat,
+    lon: sLon,
+
+    // thêm object location để các file khác dùng an toàn
+    location: locId || sLat != null || sLon != null
+      ? { id: locId ? String(locId) : null, lat: sLat, lon: sLon, name: data?.location?.name || data?.station_name || null }
+      : null,
   };
 }
+
 
 // Xuất global cho các file khác dùng
 window.API_BASE = API_BASE;

@@ -20,3 +20,4 @@ function initLegend() {
 }
 
 window.initLegend = initLegend;
+

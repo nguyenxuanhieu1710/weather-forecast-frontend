@@ -120,7 +120,7 @@
           <i class="ri-rainy-line"></i>
         </button>
 
-        <button class="float-btn" id="btn-radar-rain" title="Radar mưa (3h gần nhất)">
+        <button class="float-btn" id="btn-radar-rain" title="Radar mưa (6h gần nhất)">
           <i class="ri-radar-line"></i>
         </button>
 
@@ -161,14 +161,6 @@
           </div>
         </div>
 
-        <!-- Model Selector -->
-        <div id="model-switcher" class="model-switcher">
-          <button class="model-btn active" data-model="RidgeRegression">RidgeRegression</button>
-          <button class="model-btn" data-model="XGBoost">XGBoost</button>
-          <button class="model-btn" data-model="LightGBM">LightGBM</button>
-          <button class="model-btn" data-model="GRU">GRU</button>
-        </div>
-
         <!-- Body: header theo ngày + track giờ + legend -->
         <div class="fb-body">
           <!-- Hàng ngày (Windy-style), JS sẽ fill .fb-day-group-head -->
@@ -192,6 +184,12 @@
               <span class="dot dot-wind"></span>Gió (m/s)
             </div>
           </div>
+        </div>
+      </div>
+      <!-- DAILY POPUP (mount point) -->
+      <div id="fb-daily-popup" class="fb-daily-popup hidden">
+        <div id="fb-daily-popup-card" class="fb-daily-popup-card wx-card">
+          <!-- JS (timebar.js) sẽ đổ nội dung vào đây -->
         </div>
       </div>
 
@@ -236,10 +234,19 @@
         <div class="home-card-main" id="home-temp-avg">--.-°C</div>
         
         <div class="home-card-footer" id="home-temp-range">
-          Cao nhất: <span id="home-temp-max">--</span> <br> Thấp nhất: <span id="home-temp-min">--</span>
+          Cao nhất: <span id="home-temp-max">--</span>
+          <span> | </span>
+          Tọa độ: <span id="home-temp-max-coord">--</span>
+          <br>
+          Thấp nhất: <span id="home-temp-min">--</span>
+          <span> | </span>
+          Tọa độ: <span id="home-temp-min-coord">--</span>
+
+          <!-- giữ lại nếu JS bạn còn dùng, hoặc bạn muốn để dự phòng -->
           <span id="home-temp-max-loc" style="display:none"></span>
           <span id="home-temp-min-loc" style="display:none"></span>
         </div>
+
       </article>
 
       <article class="home-card">

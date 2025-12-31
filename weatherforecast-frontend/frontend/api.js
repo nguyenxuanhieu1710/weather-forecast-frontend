@@ -1,3 +1,4 @@
+//api.js
 const API_BASE = window.API_BASE;
 
 // Lấy điểm gần nhất theo click
@@ -23,3 +24,20 @@ window.fetchObsSummary = async function (locationId) {
   if (!resp.ok) throw new Error("summary error");
   return await resp.json();
 };
+
+
+
+
+
+
+
+
+
+
+                  
+
+
+
+
+
+

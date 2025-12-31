@@ -1,8 +1,20 @@
 // map.js
 // Khởi tạo Leaflet map, load biên giới Việt Nam, xử lý click gọi /obs/nearest + /obs/timeseries
 
+
 window.map = null;
 let clickMarker = null;
+
+
+
+function getApiBase() {
+  // Ưu tiên API_BASE nếu bạn có khai báo global
+  return typeof window.API_BASE === "string" && window.API_BASE
+    ? window.API_BASE
+    : "http://localhost:8000/api";
+}
+
+
 
 function findVietnamFeature(geojson) {
   if (!geojson || !Array.isArray(geojson.features)) return null;
@@ -71,8 +83,7 @@ function pointInRing(x, y, ring) {
     const yj = ring[j][1];
 
     const intersect =
-      yi > y !== yj > y &&
-      x < ((xj - xi) * (y - yi)) / (yj - yi + 1e-12) + xi;
+      yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi + 1e-12) + xi;
     if (intersect) inside = !inside;
   }
   return inside;
@@ -129,19 +140,41 @@ function isClickInsideVietnam(lat, lon) {
 }
 
 function bindMapClickNearest(map) {
+  // chống race: click sau phải thắng
+  let clickSeq = 0;
+
+  function pickNearestFields(result) {
+    const locId =
+      result?.location_id ||
+      result?.location?.id ||
+      result?.location?.location_id ||
+      null;
+
+    const sLat =
+      (typeof result?.lat === "number" ? result.lat : null) ??
+      (typeof result?.location?.lat === "number" ? result.location.lat : null);
+
+    const sLon =
+      (typeof result?.lon === "number" ? result.lon : null) ??
+      (typeof result?.location?.lon === "number" ? result.location.lon : null);
+
+    return { locId: locId ? String(locId) : null, sLat, sLon };
+  }
+
   map.on("click", async (e) => {
+    const seq = ++clickSeq;
+
     const lat = e.latlng.lat;
     const lon = e.latlng.lng;
 
     const inside = isClickInsideVietnam(lat, lon);
 
-    // ================== CLICK NGOÀI VIỆT NAM ==================
+    // ===== CLICK NGOÀI VIỆT NAM =====
     if (!inside) {
-      L.popup({
-        maxWidth: 220
-      })
+      L.popup({ maxWidth: 220 })
         .setLatLng(e.latlng)
-        .setContent(`
+        .setContent(
+          `
           <div style="text-align:center; font-size:13px;">
             Vị trí đang chọn:<br>
             <b>${lat.toFixed(4)}, ${lon.toFixed(4)}</b><br>
@@ -149,39 +182,55 @@ function bindMapClickNearest(map) {
               Nằm ngoài phạm vi Việt Nam
             </span>
           </div>
-        `)
+        `
+        )
         .openOn(map);
 
-      // Xoá state + panel chi tiết
       window.lastNearestResult = null;
       window.lastLocationId = null;
       window.lastCell = null;
 
-      if (typeof window.clearWeatherDetail === "function") {
-        window.clearWeatherDetail();
-      }
-      if (typeof window.hideAlertPanel === "function") {
-        window.hideAlertPanel();
+      if (clickMarker) {
+        try {
+          map.removeLayer(clickMarker);
+        } catch (_) {}
+        clickMarker = null;
       }
 
-      // Không gọi API /obs/nearest
+      if (typeof window.clearWeatherDetail === "function")
+        window.clearWeatherDetail();
+      if (typeof window.hideAlertPanel === "function") window.hideAlertPanel();
+
       return;
     }
 
-    // ================== CLICK TRONG VIỆT NAM ==================
-    // 1. HIỆN POPUP TRẠNG THÁI CHỜ
+    // ===== CLICK TRONG VIỆT NAM =====
+    // marker điểm click (UX + debug)
+    if (!clickMarker) {
+      clickMarker = L.circleMarker(e.latlng, {
+        radius: 6,
+        weight: 2,
+        color: "#22c55e",
+        fillColor: "#22c55e",
+        fillOpacity: 0.35,
+      }).addTo(map);
+    } else {
+      clickMarker.setLatLng(e.latlng);
+    }
+
     const popup = L.popup()
       .setLatLng(e.latlng)
-      .setContent(`
+      .setContent(
+        `
         <div style="text-align: center;">
-           Vị trí đang chọn:<br>
-           <b>${lat.toFixed(4)}, ${lon.toFixed(4)}</b><br>
-           <span style="font-size: 11px; color: gray;">... Đang tìm trạm ...</span>
+          Vị trí đang chọn:<br>
+          <b>${lat.toFixed(4)}, ${lon.toFixed(4)}</b><br>
+          <span style="font-size: 11px; color: gray;">... Đang tìm trạm ...</span>
         </div>
-      `)
+      `
+      )
       .openOn(map);
 
-    // 2. GỌI API LẤY DỮ LIỆU
     let result = null;
     try {
       if (typeof window.fetchNearestTemp === "function") {
@@ -191,74 +240,78 @@ function bindMapClickNearest(map) {
       console.error("[map] fetchNearestTemp failed", err);
     }
 
-    // 3. CẬP NHẬT POPUP
-    if (map.hasLayer(popup)) {
-      if (result && result.found) {
-        const sLat = result.lat;
-        const sLon = result.lon;
+    // nếu có click mới hơn => bỏ qua kết quả cũ
+    if (seq !== clickSeq) return;
 
+    const { locId, sLat, sLon } = pickNearestFields(result);
+
+
+    if (map.hasLayer(popup)) {
+      if (result && result.found && locId) {
         popup.setContent(`
           <div style="text-align: center;">
-             Vị trí đang chọn:<br>
-             <b>${lat.toFixed(4)}, ${lon.toFixed(4)}</b>
-             <hr style="margin: 5px 0; border: 0; border-top: 1px solid #ddd;">
-             <span style="color: #007bff; font-weight: bold;">Trạm quan trắc gần nhất:</span><br>
-             Tọa độ: <b>${sLat}, ${sLon}</b><br>
-          </div>
+            Vị trí đang chọn:<br>
+            <b>${lat.toFixed(4)}, ${lon.toFixed(4)}</b>
+            <hr style="margin: 5px 0; border: 0; border-top: 1px solid #ddd;">
+            <span style="color: #007bff; font-weight: bold;">Trạm quan trắc gần nhất:</span><br>
+            Tọa độ: <b>${typeof sLat === "number" ? sLat.toFixed(1) : "–"}, ${
+          typeof sLon === "number" ? sLon.toFixed(1) : "–"
+        }
         `);
       } else {
         popup.setContent(`
           <div style="text-align: center;">
-             Vị trí đang chọn:<br>
-             <b>${lat.toFixed(4)}, ${lon.toFixed(4)}</b><br>
-             <i>Không tìm thấy trạm gần đây</i>
+            Vị trí đang chọn:<br>
+            <b>${lat.toFixed(4)}, ${lon.toFixed(4)}</b><br>
+            <i>Không tìm thấy trạm gần đây</i>
           </div>
         `);
       }
     }
 
-    // 4. CẬP NHẬT SIDEBAR + ALERT + TIME SERIES
+    // cập nhật state
     let cell = null;
-    let locationId = null;
-
-    if (result && result.found && result.location_id) {
-      locationId = String(result.location_id);
+    if (locId) {
       cell =
         typeof findCellByLocationId === "function"
-          ? findCellByLocationId(locationId)
+          ? findCellByLocationId(locId)
           : null;
     }
 
     window.lastNearestResult = result || null;
-    window.lastLocationId = locationId;
+    window.lastLocationId = locId || null;
     window.lastCell = cell || null;
 
-    if (typeof window.updateWeatherDetail === "function") {
-      window.updateWeatherDetail(lat, lon, result, cell);
+    // sync TimeState locationId để toàn app nhất quán
+    if (
+      locId &&
+      window.TimeState &&
+      typeof window.TimeState.setLocationId === "function"
+    ) {
+      window.TimeState.setLocationId(locId);
     }
 
-    if (locationId && window.fetchAlertSummary && window.updateAlertPanel) {
+    if (locId && window.fetchAlertSummary && window.updateAlertPanel) {
       try {
-        const summary = await window.fetchAlertSummary(locationId);
+        const summary = await window.fetchAlertSummary(locId);
+        if (seq !== clickSeq) return;
         window.updateAlertPanel(summary);
-        if (typeof window.showAlertPanel === "function") {
+        if (typeof window.showAlertPanel === "function")
           window.showAlertPanel();
-        }
       } catch (err) {
         console.error("[map] fetchAlertSummary failed", err);
       }
     }
 
-    if (locationId && typeof window.loadTimeSeriesForLocation === "function") {
+    if (locId && typeof window.loadTimeSeriesForLocation === "function") {
       try {
-        await window.loadTimeSeriesForLocation(locationId);
+        await window.loadTimeSeriesForLocation(locId);
       } catch (err) {
         console.error("[map] loadTimeSeriesForLocation failed", err);
       }
     }
   });
 }
-
 
 function initMap() {
   if (window.map) return window.map;

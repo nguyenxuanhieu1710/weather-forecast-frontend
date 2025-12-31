@@ -485,3 +485,10 @@ window.stopRainRadar = stopRainRadar;
 // Optional wrapper cho main.js cũ (nếu có dùng)
 window.showRainRadar = () => startRainRadar(3);
 window.hideRainRadar = stopRainRadar;
+
+
+
+
+
+
+

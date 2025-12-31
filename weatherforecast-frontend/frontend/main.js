@@ -138,7 +138,7 @@ function updateLayerInfo(mode) {
     case "radar":
       chip.textContent = "Lớp: Radar mưa";
       legend.innerHTML = `
-        <div class="legend-title">Radar mưa (3 giờ gần đây)</div>
+        <div class="legend-title">Radar mưa (6 giờ gần đây)</div>
         <div style="font-size:9px; color:#94a3b8; margin-bottom:4px;">
           Màu đậm hơn = vùng mưa mạnh hơn
         </div>
@@ -509,25 +509,38 @@ function setupLayerButtons() {
 // =============================================================
 async function loadTimeSeriesForLocation(locationId) {
   try {
-    const url = `${API_BASE}/obs/timeseries/${locationId}`;
-    const res = await fetch(url);
-    if (!res.ok) throw new Error("timeseries error");
-    const js = await res.json();
+    const base =
+      (typeof window.API_BASE === "string" && window.API_BASE) ? window.API_BASE : "/api";
 
-    // Backend: { location_id, count, data: [ { valid_at, temp_c, ... }, ... ] }
+    // Nếu backend của bạn hỗ trợ back/fwd thì nên set cố định để luôn đủ dải giờ
+    const url = `${base}/obs/timeseries/${locationId}`;
+
+    const res = await fetch(url, { cache: "no-store" });
+    if (!res.ok) throw new Error(`timeseries HTTP ${res.status}`);
+
+    let js = await res.json();
+
+    // (1) Nếu backend trả mảng steps thuần -> wrap lại để timebar normalize được
+    if (Array.isArray(js)) {
+      js = { steps: js };
+    }
+
+    // (2) Set locationId vào TimeState để toàn app sync đúng điểm
+    if (window.TimeState && typeof window.TimeState.setLocationId === "function") {
+      window.TimeState.setLocationId(locationId);
+    }
+
+    // (3) initTimeSteps nếu muốn (timebar.js cũng có thể init, nhưng giữ ở đây không sao)
     let steps = [];
-    if (Array.isArray(js.data)) {
-      steps = js.data.map((d) => d.valid_at);
-    } else if (Array.isArray(js.time_steps)) {
-      steps = js.time_steps.slice();
-    } else if (Array.isArray(js.steps)) {
-      steps = js.steps.slice();
+    if (Array.isArray(js.data)) steps = js.data.map((d) => d.valid_at);
+    else if (Array.isArray(js.time_steps)) steps = js.time_steps.slice();
+    else if (Array.isArray(js.steps)) steps = js.steps.map((s) => (s?.valid_at ? s.valid_at : s)).slice();
+
+    if (window.TimeState && typeof window.TimeState.initTimeSteps === "function" && steps.length) {
+      window.TimeState.initTimeSteps(steps);
     }
 
-    if (window.TimeState && typeof TimeState.initTimeSteps === "function") {
-      TimeState.initTimeSteps(steps);
-    }
-
+    // Render timebar
     if (typeof window.setForecastSeries === "function") {
       window.setForecastSeries(js);
     }
@@ -538,6 +551,7 @@ async function loadTimeSeriesForLocation(locationId) {
   }
 }
 window.loadTimeSeriesForLocation = loadTimeSeriesForLocation;
+
 
 // =============================================================
 // PAGE TABS: HOME / THÔNG BÁO / THÔNG TIN CHUNG (OVERLAY TRÊN MAP)

@@ -120,10 +120,12 @@
 }
 
 
+/* info nếu còn xuất hiện thì cũng coi như "Cần chú ý" để đồng bộ UX */
 .alert-level-info {
-  background: #dbeafe;
-  color: #1e40af;
+  background: #fef3c7;
+  color: #92400e;
 }
+
 
 /* CẦN CHÚ Ý – VÀNG */
 .alert-level-medium,
@@ -267,7 +269,8 @@
   border-left-style: solid;
 }
 
-.alert-hazard-card.alert-level-info { background: #eff6ff; border-left-color: #3b82f6; }
+/* info nếu còn xuất hiện thì hiển thị như medium */
+.alert-hazard-card.alert-level-info { background: #fffbeb; border-left-color: #f59e0b; }
 .alert-hazard-card.alert-level-watch { background: #fffbeb; border-left-color: #f59e0b; }
 .alert-hazard-card.alert-level-warning { background: #fef2f2; border-left-color: #ef4444; }
 .alert-hazard-card.alert-level-danger { background: #fef2f2; border-left-color: #b91c1c; }
@@ -344,3 +347,23 @@
       grid-template-columns: 1fr 1fr; /* Vẫn giữ 2 cột trên mobile */
   }
 }
+
+/* Flood risk badge */
+.icon-flood { color: #0ea5e9; }
+
+.flood-badge{
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  border: 1px solid rgba(0,0,0,0.06);
+}
+
+.flood-none    { background: #e5e7eb; color: #374151; }
+.flood-low     { background: #dcfce7; color: #166534; }
+.flood-medium  { background: #fef3c7; color: #92400e; }
+.flood-high    { background: #fee2e2; color: #991b1b; }
+.flood-extreme { background: #7f1d1d; color: #fef2f2; border-color: rgba(255,255,255,0.12); }

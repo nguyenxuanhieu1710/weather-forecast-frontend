@@ -20,6 +20,10 @@
     if (!el) return;
     el.textContent = text;
   }
+  function formatCoord(lat, lon) {
+    if (typeof lat !== "number" || typeof lon !== "number") return "--";
+    return `${lat.toFixed(1)}, ${lon.toFixed(1)}`;
+  }
 
   // Sinh đoạn tóm tắt từ overview
   function buildSummaryText(data) {
@@ -101,14 +105,10 @@
         setText("home-obs-time", "Quan trắc: --");
       }
 
-      setText(
-        "home-obs-count",
-        "Số điểm: " + (data.count_locations ?? "--")
-      );
+      setText("home-obs-count", "Số điểm: " + (data.count_locations ?? "--"));
 
       // Tóm tắt nhanh
-      const summary = buildSummaryText(data);
-      setText("home-summary-text", summary);
+      setText("home-summary-text", buildSummaryText(data));
 
       // Nhiệt độ
       const temp = data.temp || {};
@@ -116,65 +116,56 @@
       setText("home-temp-max", formatTemp(temp.max_c));
       setText("home-temp-min", formatTemp(temp.min_c));
 
+      // Tọa độ nóng nhất / lạnh nhất
+      if (temp.hottest) {
+        setText("home-temp-max-coord", formatCoord(temp.hottest.lat, temp.hottest.lon));
+      } else {
+        setText("home-temp-max-coord", "--");
+      }
+
+      if (temp.coldest) {
+        setText("home-temp-min-coord", formatCoord(temp.coldest.lat, temp.coldest.lon));
+      } else {
+        setText("home-temp-min-coord", "--");
+      }
+
+      // (Tuỳ chọn) Nếu vẫn muốn giữ loc ẩn để debug
       if (temp.hottest && temp.hottest.name) {
-        setText(
-          "home-temp-max-loc",
-          `${temp.hottest.name} (${temp.hottest.lat.toFixed(
-            1
-          )}, ${temp.hottest.lon.toFixed(1)})`
-        );
+        setText("home-temp-max-loc", `${temp.hottest.name} (${formatCoord(temp.hottest.lat, temp.hottest.lon)})`);
       } else {
         setText("home-temp-max-loc", "--");
       }
 
       if (temp.coldest && temp.coldest.name) {
-        setText(
-          "home-temp-min-loc",
-          `${temp.coldest.name} (${temp.coldest.lat.toFixed(
-            1
-          )}, ${temp.coldest.lon.toFixed(1)})`
-        );
+        setText("home-temp-min-loc", `${temp.coldest.name} (${formatCoord(temp.coldest.lat, temp.coldest.lon)})`);
       } else {
         setText("home-temp-min-loc", "--");
       }
 
       // Mưa
       const rain = data.rain || {};
-      setText(
-        "home-rain-count",
-        rain.raining_count != null ? String(rain.raining_count) : "--"
-      );
-      setText(
-        "home-rain-heavy-count",
-        rain.heavy_rain_count != null ? String(rain.heavy_rain_count) : "--"
-      );
+      setText("home-rain-count", rain.raining_count != null ? String(rain.raining_count) : "--");
+      setText("home-rain-heavy-count", rain.heavy_rain_count != null ? String(rain.heavy_rain_count) : "--");
 
       // Nắng nóng
-      setText(
-        "home-hot-35",
-        temp.hot_count_ge_35 != null ? String(temp.hot_count_ge_35) : "--"
-      );
-      setText(
-        "home-hot-37",
-        temp.hot_count_ge_37 != null ? String(temp.hot_count_ge_37) : "--"
-      );
+      setText("home-hot-35", temp.hot_count_ge_35 != null ? String(temp.hot_count_ge_35) : "--");
+      setText("home-hot-37", temp.hot_count_ge_37 != null ? String(temp.hot_count_ge_37) : "--");
 
       // Gió mạnh
       const wind = data.wind || {};
-      setText(
-        "home-strong-wind",
-        wind.strong_wind_count != null ? String(wind.strong_wind_count) : "--"
-      );
+      setText("home-strong-wind", wind.strong_wind_count != null ? String(wind.strong_wind_count) : "--");
     } catch (err) {
       console.error("[dashboard] initHomeDashboard error:", err);
       setText("home-obs-time", "Quan trắc: lỗi dữ liệu");
       setText("home-obs-count", "Số điểm: --");
-      setText(
-        "home-summary-text",
-        "Không lấy được dữ liệu tổng quan từ backend."
-      );
+      setText("home-summary-text", "Không lấy được dữ liệu tổng quan từ backend.");
+
+      // optional: set fallback cho tọa độ để UI không trống
+      setText("home-temp-max-coord", "--");
+      setText("home-temp-min-coord", "--");
     }
   }
+
 
   w.initHomeDashboard = initHomeDashboard;
 })(window);

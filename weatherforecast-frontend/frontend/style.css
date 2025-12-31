@@ -1591,6 +1591,205 @@ body {
 }
 
 
+/* popup daily */
+/* popup daily */
+/* =========================
+   DAILY POPUP – CALLOUT + ARROW
+   ========================= */
+.fb-daily-popup.hidden { display:none !important; }
+
+.fb-daily-popup{
+  position: fixed;
+  left: 0;                  /* JS sẽ set left cho card */
+  bottom: 110px;            /* ngay trên timebar */
+  z-index: 2000;
+  background: transparent !important;
+  pointer-events: none;
+  width: min(360px, calc(100vw - 20px));
+}
+
+.fb-daily-popup-card{
+  position: relative;       /* bắt buộc để vẽ mũi tên */
+  pointer-events: auto;
+  width: 100%;
+  border-radius: 14px;
+  padding: 10px 12px 12px;
+
+  background: linear-gradient(180deg, rgba(255,255,255,0.96), rgba(245,247,250,0.94)) !important;
+  color: #0f172a !important;
+  border: 1.5px solid rgba(99,102,241,0.45);
+
+  box-shadow: 0 14px 36px rgba(2,6,23,0.22), 0 6px 14px rgba(2,6,23,0.14);
+}
+
+/* mũi tên trỏ xuống (2 lớp: viền + nền) */
+.fb-daily-popup-card::before{
+  content:"";
+  position:absolute;
+  bottom:-11px;
+  left: var(--arrow-left, 50%);
+  transform: translateX(-50%);
+  width:0; height:0;
+  border-left: 11px solid transparent;
+  border-right:11px solid transparent;
+  border-top: 11px solid rgba(99,102,241,0.45); /* viền */
+}
+
+.fb-daily-popup-card::after{
+  content:"";
+  position:absolute;
+  bottom:-10px;
+  left: var(--arrow-left, 50%);
+  transform: translateX(-50%);
+  width:0; height:0;
+  border-left: 10px solid transparent;
+  border-right:10px solid transparent;
+  border-top: 10px solid rgba(255,255,255,0.96); /* nền */
+  filter: drop-shadow(0 6px 10px rgba(2,6,23,0.18));
+}
+
+/* header: title trái, nút X phải */
+.wx-head{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.wx-title{
+  font-size: 13px;
+  font-weight: 900;
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+
+.wx-badge{
+  font-size: 10px;
+  font-weight: 800;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: rgba(99,102,241,0.12);
+  border: 1px solid rgba(99,102,241,0.22);
+  color: #3730a3;
+}
+
+.wx-sub{
+  margin-top: 2px;
+  font-size: 10.5px;
+  color: rgba(15,23,42,0.65);
+}
+
+/* nút đóng bên phải */
+.wx-close{
+  margin-left:auto;
+  border: none;
+  background: transparent;
+  color: rgba(15,23,42,0.6);
+  cursor: pointer;
+  width: 28px;
+  height: 28px;
+  border-radius: 10px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  line-height: 1;
+}
+.wx-close:hover{
+  background: rgba(15,23,42,0.08);
+  color: rgba(15,23,42,0.85);
+}
+
+/* rows: 2 columns fixed */
+.wx-rows{
+  display:flex;
+  flex-direction:column;
+  gap: 6px;
+}
+
+.wx-row{
+  display:grid;
+  grid-template-columns: 148px 1fr;
+  gap: 10px;
+  align-items:center;
+
+  padding: 6px 8px;
+  border-radius: 10px;
+  background: rgba(255,255,255,0.62);
+  border: 1px solid rgba(15,23,42,0.08);
+}
+
+.wx-k{
+  font-size: 10px;
+  font-weight: 700;
+  color: rgba(15,23,42,0.62);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.wx-v{
+  font-size: 11.5px;
+  font-weight: 900;
+  color: #0f172a;
+  text-align: right;
+}
+
+.wx-tabular{
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+}
+
+.wx-split3{
+  display:grid;
+  grid-template-columns: repeat(3, minmax(0,1fr));
+  gap: 6px;
+}
+.wx-split3 > span{
+  display:block;
+  text-align:right;
+  padding: 2px 4px;
+  border-radius: 8px;
+  background: rgba(99,102,241,0.08);
+  border: 1px solid rgba(99,102,241,0.14);
+}
+
+
+/* Thanh màu nguồn dữ liệu trong mỗi cell */
+.fb-cell {
+  position: relative;
+}
+
+.fb-cell-srcbar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 3px;
+  opacity: 0.95;
+  border-radius: 0 0 6px 6px;
+}
+
+.fb-cell-srcbar.obs  { background: #38bdf8; }  /* OBS */
+.fb-cell-srcbar.fcst { background: #facc15; }  /* FCST */
+
+/* Cell tương lai (forecast horizon): nhìn khác rõ ràng */
+.fb-cell-future {
+  filter: saturate(0.95);
+  opacity: 0.92;
+}
+
+/* Nếu muốn “nhấn mạnh” dự báo hơn nữa: viền dashed */
+.fb-cell-future.fb-src-fcst {
+  outline: 1px dashed rgba(250, 204, 21, 0.55);
+  outline-offset: -1px;
+}
+
+/* Optional: cell none có thể giảm bão hoà hoặc hiển thị khác */
+.fb-src-none .fb-cell-temp-text {
+  opacity: 0.65;
+}
 
 
 
