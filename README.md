@@ -23,18 +23,16 @@ Dữ liệu được hiển thị thông qua các biểu đồ tương tác và 
 
 ## 📸 Hình ảnh giao diện (Screenshots)
 
-| 🌍 Dashboard Tổng quan | 🗺️ Bản đồ Nhiệt & Gió |
-|:---:|:---:|
-| <img width="1600" height="806" alt="ManHomeWeb" src="https://github.com/user-attachments/assets/ba73f462-3960-4840-8496-5f9174ed69d9" />
- | <img width="1600" height="800" alt="ManHinhChinhWeb" src="https://github.com/user-attachments/assets/1df2b982-0700-4783-98d3-fa027ccfd8d7" />
- |
-| **Giao diện chính với các chỉ số** | **Bản đồ tương tác Leaflet** |
+## 📸 Hình ảnh giao diện (Screenshots)
 
-| 📊 Biểu đồ chi tiết | 🌡️ HeatMap Nhiệt độ |
+| 🌍 Dashboard Tổng quan | 📊 Biểu đồ chi tiết |
 |:---:|:---:|
-| <img width="1600" height="805" alt="BieuDoWeb" src="https://github.com/user-attachments/assets/6e764b09-2f05-469f-88cc-d84dbd71e5d8" />
- | <img width="1600" height="813" alt="NhietDoWeb" src="https://github.com/user-attachments/assets/aae90201-c78f-41d1-b8ee-84405ef8c207" />
- |
+| <img src="https://github.com/user-attachments/assets/ba73f462-3960-4840-8496-5f9174ed69d9" width="100%" alt="ManHomeWeb" /> | <img src="https://github.com/user-attachments/assets/6e764b09-2f05-469f-88cc-d84dbd71e5d8" width="100%" alt="BieuDoWeb" /> |
+| **Giao diện chính với các chỉ số** | **Phân tích dữ liệu lịch sử/dự báo** |
+
+| 🗺️ Bản đồ Nhiệt & Gió (Leaflet) | 🌡️ HeatMap Nhiệt độ (Chuyên sâu) |
+|:---:|:---:|
+| <img src="https://github.com/user-attachments/assets/1df2b982-0700-4783-98d3-fa027ccfd8d7" width="100%" alt="ManHinhChinhWeb" /> | <img src="https://github.com/user-attachments/assets/aae90201-c78f-41d1-b8ee-84405ef8c207" width="100%" alt="NhietDoWeb" /> |
 
 ## ✨ Tính năng chính (Key Features)
 
