@@ -23,8 +23,6 @@ Dữ liệu được hiển thị thông qua các biểu đồ tương tác và 
 
 ## 📸 Hình ảnh giao diện (Screenshots)
 
-## 📸 Hình ảnh giao diện (Screenshots)
-
 | 🌍 Dashboard Tổng quan | 📊 Biểu đồ chi tiết |
 |:---:|:---:|
 | <img src="https://github.com/user-attachments/assets/ba73f462-3960-4840-8496-5f9174ed69d9" width="100%" alt="ManHomeWeb" /> | <img src="https://github.com/user-attachments/assets/6e764b09-2f05-469f-88cc-d84dbd71e5d8" width="100%" alt="BieuDoWeb" /> |
@@ -32,8 +30,7 @@ Dữ liệu được hiển thị thông qua các biểu đồ tương tác và 
 
 | 🗺️ Bản đồ Gió | 🌡️ HeatMap Nhiệt độ |
 |:---:|:---:|
-| <img width="1600" height="810" alt="BanDoGioWeb" src="https://github.com/user-attachments/assets/82a65fff-69f0-48c2-b667-3078d02d8c34" />
- /> | <img src="https://github.com/user-attachments/assets/aae90201-c78f-41d1-b8ee-84405ef8c207" width="100%" alt="NhietDoWeb" /> |
+| <img src="https://github.com/user-attachments/assets/82a65fff-69f0-48c2-b667-3078d02d8c34" width="100%" alt="BanDoGioWeb" /> | <img src="https://github.com/user-attachments/assets/aae90201-c78f-41d1-b8ee-84405ef8c207" width="100%" alt="NhietDoWeb" /> |
 
 ## ✨ Tính năng chính (Key Features)
 
