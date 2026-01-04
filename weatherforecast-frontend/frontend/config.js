@@ -164,8 +164,6 @@ async function fetchNearestTemp(lat, lon) {
   };
 }
 
-<<<<<<< Updated upstream
-=======
 // ===================== Latest OBS (ALL VARS) – cache + inflight =====================
 
 const LATEST_OBS_TTL_MS = 60 * 1000; // 60s, bạn có thể tăng/giảm
@@ -244,7 +242,6 @@ function invalidateLatestObs() {
 }
 
 
->>>>>>> Stashed changes
 // Xuất global cho các file khác dùng
 window.API_BASE = API_BASE;
 window.LQ_KEY = LQ_KEY;

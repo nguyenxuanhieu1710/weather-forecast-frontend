@@ -474,17 +474,11 @@ const WindCanvasLayer = L.Layer.extend({
       currentWindField = field;
       window.currentWindField = field;
 
-<<<<<<< Updated upstream
-      // thông báo cho layer hạt gió nếu đang bật
-      if (window.windParticleLayer && typeof window.windParticleLayer.onFieldUpdated === "function") {
-        window.windParticleLayer.onFieldUpdated();
-=======
       if (
         window.windStreamlineLayer &&
         typeof window.windStreamlineLayer.onFieldUpdated === "function"
       ) {
         window.windStreamlineLayer.onFieldUpdated();
->>>>>>> Stashed changes
       }
 
       this._scheduleRedraw();
@@ -496,16 +490,11 @@ const WindCanvasLayer = L.Layer.extend({
       currentWindField = null;
       window.currentWindField = null;
 
-<<<<<<< Updated upstream
-      if (window.windParticleLayer && typeof window.windParticleLayer.onFieldUpdated === "function") {
-        window.windParticleLayer.onFieldUpdated();
-=======
       if (
         window.windStreamlineLayer &&
         typeof window.windStreamlineLayer.onFieldUpdated === "function"
       ) {
         window.windStreamlineLayer.onFieldUpdated();
->>>>>>> Stashed changes
       }
 
       this._scheduleRedraw();
