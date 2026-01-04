@@ -164,6 +164,87 @@ async function fetchNearestTemp(lat, lon) {
   };
 }
 
+<<<<<<< Updated upstream
+=======
+// ===================== Latest OBS (ALL VARS) – cache + inflight =====================
+
+const LATEST_OBS_TTL_MS = 60 * 1000; // 60s, bạn có thể tăng/giảm
+let latestObsCache = null;           // { cells, fetchedAt, validUntil, obsTime }
+let inflightLatestObs = null;
+
+async function getLatestObs(force = false) {
+  const now = Date.now();
+
+  // cache TTL
+  if (!force && latestObsCache && now < latestObsCache.validUntil) {
+    return latestObsCache.cells;
+  }
+
+  // inflight share
+  if (!force && inflightLatestObs) {
+    return inflightLatestObs;
+  }
+
+  const url = `${API_BASE}/obs/latest`;
+
+  inflightLatestObs = fetch(url, { cache: "no-store" })
+    .then(async (resp) => {
+      if (!resp.ok) throw new Error(`Failed to fetch latest obs: HTTP ${resp.status}`);
+      const data = await resp.json();
+
+      const rawCells = Array.isArray(data?.data)
+        ? data.data
+        : Array.isArray(data)
+        ? data
+        : [];
+
+      // normalize (đặc biệt wind có thể là string)
+      const cells = rawCells
+        .map((r) => {
+          if (!r) return null;
+          const lat = Number(r.lat);
+          const lon = Number(r.lon);
+          if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
+
+          return {
+            ...r,
+            lat,
+            lon,
+            temp_c: r.temp_c != null ? Number(r.temp_c) : r.temp_c,
+            precip_mm: r.precip_mm != null ? Number(r.precip_mm) : r.precip_mm,
+            wind_ms: r.wind_ms != null ? Number(r.wind_ms) : r.wind_ms,
+            wind_dir_deg: r.wind_dir_deg != null ? Number(r.wind_dir_deg) : r.wind_dir_deg,
+            rel_humidity_pct: r.rel_humidity_pct != null ? Number(r.rel_humidity_pct) : r.rel_humidity_pct,
+            cloudcover_pct: r.cloudcover_pct != null ? Number(r.cloudcover_pct) : r.cloudcover_pct,
+            surface_pressure_hpa: r.surface_pressure_hpa != null ? Number(r.surface_pressure_hpa) : r.surface_pressure_hpa,
+          };
+        })
+        .filter(Boolean);
+
+      latestObsCache = {
+        cells,
+        fetchedAt: now,
+        validUntil: now + LATEST_OBS_TTL_MS,
+        obsTime: data?.obs_time || (cells.length ? cells[0]?.valid_at : null),
+      };
+
+      window.latestObsCache = latestObsCache;
+      return cells;
+    })
+    .finally(() => {
+      inflightLatestObs = null;
+    });
+
+  return inflightLatestObs;
+}
+
+function invalidateLatestObs() {
+  latestObsCache = null;
+  window.latestObsCache = null;
+}
+
+
+>>>>>>> Stashed changes
 // Xuất global cho các file khác dùng
 window.API_BASE = API_BASE;
 window.LQ_KEY = LQ_KEY;
@@ -172,6 +253,8 @@ window.TEMP_TTL_MS = TEMP_TTL_MS;
 window.TEMP_MIN_C = TEMP_MIN_C;
 window.TEMP_MAX_C = TEMP_MAX_C;
 
-window.fetchLatestTempGrid = fetchLatestTempGrid;
-window.invalidateLatestTempGrid = invalidateLatestTempGrid;
 window.fetchNearestTemp = fetchNearestTemp;
+window.getLatestObs = getLatestObs;
+window.invalidateLatestObs = invalidateLatestObs;
+window.LATEST_OBS_TTL_MS = LATEST_OBS_TTL_MS;
+

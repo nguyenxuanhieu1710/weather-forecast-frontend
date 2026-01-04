@@ -3,9 +3,9 @@
 // Yêu cầu:
 //  - window.map (Leaflet) đã khởi tạo
 //  - Backend trả cells có: lat, lon, wind_ms, wind_dir_deg
-//  - Có ít nhất một trong hai hàm:
-//      window.fetchLatestTempGrid() -> { cells: [...] }
-//      window.getLatestObs()        -> [ {...}, ... ]
+//  - Cần có dữ liệu latest cells có wind_ms, wind_dir_deg:
+//      window.getLatestObs() -> [ {...}, ... ]
+//      hoặc fetch trực tiếp /api/obs/latest
 //  - Nếu có hàm window.isPointInsideVN(lat, lon) -> boolean thì sẽ tự động lọc trong VN
 
 // ===================== Cấu hình =====================
@@ -416,47 +416,102 @@ const WindCanvasLayer = L.Layer.extend({
 
   _fetchAndRedraw: async function () {
     try {
-      let cells = [];
+      let raw = [];
 
-      // Ưu tiên fetchLatestTempGrid nếu có
-      if (typeof window.fetchLatestTempGrid === "function") {
-        const state = await window.fetchLatestTempGrid(false);
-        cells = state && Array.isArray(state.cells) ? state.cells : [];
-      } else if (typeof window.getLatestObs === "function") {
+      // 1) Ưu tiên dùng helper nếu có (thường đã cache/TTL)
+      if (typeof window.getLatestObs === "function") {
         const obs = await window.getLatestObs();
-        cells = Array.isArray(obs) ? obs : [];
+        raw = Array.isArray(obs) ? obs : [];
+      } else {
+        // 2) Fallback gọi trực tiếp API latest (DÙNG API_BASE)
+        const base = (window.API_BASE || "").replace(/\/+$/, ""); // bỏ slash cuối
+        const url = base ? `${base}/obs/latest` : "/api/obs/latest";
+
+        const r = await fetch(url, { cache: "no-store" });
+        if (!r.ok) throw new Error("GET latest failed: " + r.status);
+
+        const j = await r.json();
+        raw = Array.isArray(j?.data)
+          ? j.data
+          : Array.isArray(j?.cells)
+          ? j.cells
+          : Array.isArray(j)
+          ? j
+          : [];
       }
 
+      // 3) Normalize cell (ép kiểu number) để tránh bị drop do string/null
+      let cells = raw
+        .map((c) => {
+          if (!c) return null;
+          const lat = Number(c.lat);
+          const lon = Number(c.lon);
+
+          const wind_ms = c.wind_ms == null ? null : Number(c.wind_ms);
+          const wind_dir_deg = c.wind_dir_deg == null ? null : Number(c.wind_dir_deg);
+
+          if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
+
+          return {
+            ...c,
+            lat,
+            lon,
+            wind_ms: Number.isFinite(wind_ms) ? wind_ms : null,
+            wind_dir_deg: Number.isFinite(wind_dir_deg) ? wind_dir_deg : null,
+          };
+        })
+        .filter(Boolean);
+
+      // 4) Filter VN nếu có
       if (typeof window.filterCellsInsideVN === "function") {
         cells = window.filterCellsInsideVN(cells);
       }
 
       this._cells = cells;
+
       const field = buildWindFieldFromCells(cells);
       this._field = field;
       currentWindField = field;
       window.currentWindField = field;
 
+<<<<<<< Updated upstream
       // thông báo cho layer hạt gió nếu đang bật
       if (window.windParticleLayer && typeof window.windParticleLayer.onFieldUpdated === "function") {
         window.windParticleLayer.onFieldUpdated();
+=======
+      if (
+        window.windStreamlineLayer &&
+        typeof window.windStreamlineLayer.onFieldUpdated === "function"
+      ) {
+        window.windStreamlineLayer.onFieldUpdated();
+>>>>>>> Stashed changes
       }
 
       this._scheduleRedraw();
     } catch (err) {
       console.error("WindCanvasLayer fetch error", err);
+
       this._cells = [];
       this._field = null;
       currentWindField = null;
       window.currentWindField = null;
 
+<<<<<<< Updated upstream
       if (window.windParticleLayer && typeof window.windParticleLayer.onFieldUpdated === "function") {
         window.windParticleLayer.onFieldUpdated();
+=======
+      if (
+        window.windStreamlineLayer &&
+        typeof window.windStreamlineLayer.onFieldUpdated === "function"
+      ) {
+        window.windStreamlineLayer.onFieldUpdated();
+>>>>>>> Stashed changes
       }
 
       this._scheduleRedraw();
     }
   },
+
 
   _draw: function () {
     if (!this._map || !this._ctx || !this._canvas) return;

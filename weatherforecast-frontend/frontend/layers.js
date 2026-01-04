@@ -274,10 +274,51 @@ const TempCanvasLayer = L.Layer.extend({
 
   _fetchAndRedraw: async function () {
     try {
-      const state = await window.fetchLatestTempGrid(false);
-      let cells = state.cells || [];
+      let raw = [];
 
-      // dùng helper từ data.js nếu có
+      // 1) Ưu tiên dùng helper getLatestObs nếu có (cache/TTL/inflight)
+      if (typeof window.getLatestObs === "function") {
+        const obs = await window.getLatestObs(false);
+        raw = Array.isArray(obs) ? obs : [];
+      } else {
+        // 2) Fallback: gọi trực tiếp /api/obs/latest (DÙNG API_BASE nếu có)
+        const base = (window.API_BASE || "").replace(/\/+$/, ""); // bỏ slash cuối
+        const url = base ? `${base}/obs/latest` : "/api/obs/latest";
+
+        const r = await fetch(url, { cache: "no-store" });
+        if (!r.ok) throw new Error("GET latest failed: " + r.status);
+
+        const j = await r.json();
+        raw = Array.isArray(j?.data)
+          ? j.data
+          : Array.isArray(j?.cells)
+          ? j.cells
+          : Array.isArray(j)
+          ? j
+          : [];
+      }
+
+      // 3) Normalize nhiệt độ để IDW không bị drop do string/null
+      let cells = raw
+        .map((c) => {
+          if (!c) return null;
+
+          const lat = Number(c.lat);
+          const lon = Number(c.lon);
+          const temp_c = c.temp_c == null ? null : Number(c.temp_c);
+
+          if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
+
+          return {
+            ...c,
+            lat,
+            lon,
+            temp_c: Number.isFinite(temp_c) ? temp_c : null,
+          };
+        })
+        .filter(Boolean);
+
+      // filter active/VN nếu có
       if (window.filterActiveCells) {
         cells = window.filterActiveCells(cells);
       }
@@ -287,7 +328,13 @@ const TempCanvasLayer = L.Layer.extend({
 
       this._cells = cells;
       this._scheduleRedraw();
-      window.setObsTimeLabel?.(state.obsTime || null);
+
+      // obsTime: nếu có cache global thì lấy, không thì cố lấy từ cell đầu
+      const obsTime =
+        (window.latestObsCache && window.latestObsCache.obsTime) ||
+        (cells.length ? (cells[0].valid_at || null) : null);
+
+      window.setObsTimeLabel?.(obsTime);
       window.showSnapshotStatus?.("ok");
     } catch (err) {
       console.error("TempCanvasLayer fetch error", err);
@@ -296,6 +343,7 @@ const TempCanvasLayer = L.Layer.extend({
       window.showSnapshotStatus?.("error");
     }
   },
+
 
   _draw: function () {
     if (!this._map || !this._ctx || !this._canvas) return;
